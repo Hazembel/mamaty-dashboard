@@ -1,0 +1,5 @@
+{
+  "name": "Mamaty Dashboard",
+  "description": "A modern login interface for the Mamaty application dashboard, built with React and Tailwind CSS. The interface is entirely in French.",
+  "requestFramePermissions": []
+}
