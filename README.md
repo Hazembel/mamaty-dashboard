@@ -9,3 +9,7 @@
 
 2. Run the app:
    `npm run dev`
+
+3. update 
+    base: '/mamaty-dashboard/', //TODO: change to / for production
+    on vite.config.ts
