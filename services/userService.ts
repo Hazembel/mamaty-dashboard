@@ -16,9 +16,24 @@ const handleResponse = async (response: Response) => {
     if (contentType && contentType.includes('application/json')) {
       errorData = await response.json();
     } else {
-      throw new Error(`Erreur du serveur : ${response.status}. Réponse inattendue.`);
+      const text = await response.text();
+      throw new Error(`Erreur du serveur : ${response.status}. ${text}`);
     }
-    throw new Error(errorData.message || 'Une erreur est survenue.');
+    
+    let message = errorData.message || 'Une erreur est survenue.';
+
+    // Translate MongoDB Duplicate Key Errors
+    if (typeof message === 'string' && message.includes('E11000 duplicate key error')) {
+        if (message.includes('phone')) {
+            message = "Ce numéro de téléphone est déjà utilisé par un autre utilisateur.";
+        } else if (message.includes('email')) {
+            message = "Cette adresse email est déjà utilisée par un autre utilisateur.";
+        } else {
+            message = "Une entrée avec ces informations existe déjà (doublon).";
+        }
+    }
+
+    throw new Error(message);
   }
 
   // Handle successful responses with no content (e.g., DELETE)
@@ -28,6 +43,7 @@ const handleResponse = async (response: Response) => {
   
   return response.json();
 };
+
 export const getUsers = async (token: string): Promise<User[]> => {
   const response = await fetch(USERS_URL, {
     method: 'GET',
@@ -38,14 +54,7 @@ export const getUsers = async (token: string): Promise<User[]> => {
 
   // Normalize gender casing (e.g., "male" -> "Male") to match frontend types
   const normalizedUsers = data.users.map((user: User) => {
-    // Normalize User Gender
-    let normalizedGender: 'Male' | 'Female' | 'Other' | undefined = undefined;
-    if (typeof user.gender === 'string') {
-      const lowerGender = user.gender.toLowerCase();
-      if (lowerGender === 'male') normalizedGender = 'Male';
-      else if (lowerGender === 'female') normalizedGender = 'Female';
-      else if (lowerGender === 'other') normalizedGender = 'Other';
-    }
+    // User gender is passed through as-is (lowercase)
 
     // Normalize Babies Gender if they exist
     let normalizedBabies: Baby[] | undefined = undefined;
@@ -61,12 +70,8 @@ export const getUsers = async (token: string): Promise<User[]> => {
         });
     }
 
-    return { ...user, gender: normalizedGender, babies: normalizedBabies || user.babies };
+    return { ...user, babies: normalizedBabies || user.babies };
   });
-
-
-  // 🔹 Log the full response from the backend
-  console.log("[GET USERS] Full response:", data);
 
   return normalizedUsers;
 };
@@ -81,7 +86,7 @@ export const createUser = async (token: string, userData: Partial<User>): Promis
     body: JSON.stringify(userData),
   });
   const data = await handleResponse(response);
-  return data.user;
+  return data.user || data;
 };
 
 export const updateUser = async (token: string, userId: string, userData: Partial<User>): Promise<User> => {
@@ -94,7 +99,7 @@ export const updateUser = async (token: string, userId: string, userData: Partia
     body: JSON.stringify(userData),
   });
   const data = await handleResponse(response);
-  return data.user; // Backend returns { ..., user: {...} }
+  return data.user || data;
 };
 
 export const deleteUser = async (token: string, userId: string): Promise<void> => {

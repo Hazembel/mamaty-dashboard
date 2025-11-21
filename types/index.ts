@@ -6,10 +6,11 @@ export interface User {
   email: string;
   phone: string;
   avatar?: string;
-  gender?: 'Male' | 'Female' | 'Other';
+  gender?: 'male' | 'female' | 'other';
   birthday?: string;
   createdAt?: string;
   password?: string;
+  role?: 'user' | 'admin';
   // Relations
   babies?: Baby[];
   doctors?: Doctor[];
@@ -82,6 +83,8 @@ export interface Advice {
   maxDay?: number | null;
   likes?: string[];
   dislikes?: string[];
+  viewers?: string[];
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -95,6 +98,9 @@ export interface Article {
   category: Category | string;
   likes?: string[];
   dislikes?: string[];
+  viewers?: string[];
+  isActive?: boolean;
+  scheduledAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -121,6 +127,9 @@ export interface Recipe {
   maxDay?: number;
   likes?: string[];
   dislikes?: string[];
+  viewers?: string[];
+  isActive?: boolean;
+  scheduledAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

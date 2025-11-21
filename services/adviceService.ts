@@ -69,3 +69,21 @@ export const deleteAdvice = async (token: string, adviceId: string): Promise<voi
   });
   await handleResponse(response);
 };
+
+export const activateAdvice = async (token: string, adviceId: string): Promise<Advice> => {
+  const response = await fetch(`${ADVICES_URL}/${adviceId}/activate`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const data = await handleResponse(response);
+  return data.advice || data;
+};
+
+export const deactivateAdvice = async (token: string, adviceId: string): Promise<Advice> => {
+  const response = await fetch(`${ADVICES_URL}/${adviceId}/deactivate`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const data = await handleResponse(response);
+  return data.advice || data;
+};

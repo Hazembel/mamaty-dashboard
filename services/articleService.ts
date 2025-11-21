@@ -29,7 +29,8 @@ const handleResponse = async (response: Response) => {
 };
 
 export const getArticles = async (token: string): Promise<Article[]> => {
-  const response = await fetch(ARTICLES_URL, {
+  // Add timestamp to prevent caching
+  const response = await fetch(`${ARTICLES_URL}?t=${new Date().getTime()}`, {
     method: 'GET',
     headers: { 'Authorization': `Bearer ${token}` },
   });
@@ -67,4 +68,22 @@ export const deleteArticle = async (token: string, articleId: string): Promise<v
     headers: { 'Authorization': `Bearer ${token}` },
   });
   await handleResponse(response);
+};
+
+export const activateArticle = async (token: string, articleId: string): Promise<Article> => {
+  const response = await fetch(`${ARTICLES_URL}/${articleId}/activate`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const data = await handleResponse(response);
+  return data.article || data;
+};
+
+export const deactivateArticle = async (token: string, articleId: string): Promise<Article> => {
+  const response = await fetch(`${ARTICLES_URL}/${articleId}/deactivate`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const data = await handleResponse(response);
+  return data.article || data;
 };

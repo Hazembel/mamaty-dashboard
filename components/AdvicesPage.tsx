@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { getAdvices, createAdvice, updateAdvice, deleteAdvice } from '../services/adviceService';
+import { getAdvices, createAdvice, updateAdvice, deleteAdvice, activateAdvice, deactivateAdvice } from '../services/adviceService';
 import { getCategories } from '../services/categoryService';
 import { Advice, Category } from '../types';
 import Pagination from './Pagination';
@@ -59,6 +59,7 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
   
   const [sortOption, setSortOption] = useState('day-asc');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [activeTab, setActiveTab] = useState('all');
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -72,6 +73,13 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
     { value: 'title-desc', label: 'Titre (Z-A)' },
     { value: 'createdAt-desc', label: 'Plus récent' },
     { value: 'createdAt-asc', label: 'Plus ancien' },
+    { value: 'viewers-desc', label: 'Vues (Décroissant)' },
+  ];
+
+  const statusFilterOptions: DropdownOption[] = [
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'active', label: 'Actif' },
+    { value: 'inactive', label: 'Inactif' },
   ];
 
   // Filter categories to only show those relevant to 'advice'
@@ -144,12 +152,15 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
           if (categoryFilter === 'all') return true;
           const catId = typeof advice.category === 'object' ? advice.category._id : advice.category;
           return catId === categoryFilter;
+      })
+      .filter(advice => {
+          if (statusFilter === 'all') return true;
+          const isActive = advice.isActive !== false; // default true
+          return statusFilter === 'active' ? isActive : !isActive;
       });
 
     // Tab Logic
-    // We define a helper to check if an advice falls into the 6-9 range (180-270)
     const isSixToNine = (a: Advice) => {
-        // Safe cast to number to ensure comparisons work even if string is returned
         const day = a.day !== null && a.day !== undefined ? Number(a.day) : null;
         const min = a.minDay !== null && a.minDay !== undefined ? Number(a.minDay) : null;
         const max = a.maxDay !== null && a.maxDay !== undefined ? Number(a.maxDay) : null;
@@ -157,20 +168,15 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
         const start = 180;
         const end = 270;
 
-        // Check direct day targeting
         if (day !== null && !isNaN(day) && day >= start && day <= end) return true;
-        
-        // Check range targeting (if applicable)
         if (min !== null && max !== null && !isNaN(min) && !isNaN(max) && min >= start && max <= end) return true;
         
         return false;
     };
 
     if (activeTab === 'all') {
-        // "Reset" Tab = Others. Exclude anything that belongs to 6-9.
         filtered = filtered.filter(a => !isSixToNine(a));
     } else if (activeTab === '6-9') {
-        // "6-9" Tab = Include only things that belong to 6-9.
         filtered = filtered.filter(a => isSixToNine(a));
     }
 
@@ -178,16 +184,20 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
         const [key, direction] = sortOption.split('-') as [string, 'asc' | 'desc'];
         
         filtered.sort((a: any, b: any) => {
-            // Custom sort for targeting days
             if (key === 'day') {
                 const getStartDay = (item: Advice) => {
                     if (item.minDay !== null && item.minDay !== undefined) return item.minDay;
                     if (item.day !== null && item.day !== undefined) return item.day;
-                    return Infinity; // Push items without targeting to the end
+                    return Infinity; 
                 };
                 const aVal = getStartDay(a);
                 const bVal = getStartDay(b);
                 return direction === 'asc' ? aVal - bVal : bVal - aVal;
+            }
+            if (key === 'viewers') {
+                 const aVal = a.viewers?.length || 0;
+                 const bVal = b.viewers?.length || 0;
+                 return direction === 'desc' ? bVal - aVal : aVal - bVal;
             }
 
             const aVal = a[key];
@@ -207,7 +217,7 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
     }
 
     return filtered;
-  }, [advices, searchTerm, sortOption, categoryFilter, activeTab]);
+  }, [advices, searchTerm, sortOption, categoryFilter, statusFilter, activeTab]);
 
   const paginatedAdvices = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -223,7 +233,6 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
         showToast('Conseil mis à jour avec succès.', 'success');
       } else {
         const newAdvice = await createAdvice(token, adviceData);
-        // Manually populate category name for immediate display if it's returned as ID
         if (typeof newAdvice.category === 'string') {
             const cat = categories.find(c => c._id === newAdvice.category);
             if (cat) newAdvice.category = cat;
@@ -239,6 +248,25 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
       throw err;
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleStatus = async (advice: Advice) => {
+    try {
+        const isActive = advice.isActive !== false;
+        let updatedAdvice;
+        
+        if (isActive) {
+            updatedAdvice = await deactivateAdvice(token, advice._id);
+            showToast('Conseil désactivé.', 'success');
+        } else {
+            updatedAdvice = await activateAdvice(token, advice._id);
+            showToast('Conseil activé.', 'success');
+        }
+        setAdvices(advices.map(a => a._id === updatedAdvice._id ? { ...a, ...updatedAdvice } : a));
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Impossible de modifier le statut.";
+        showToast(errorMessage, 'error');
     }
   };
 
@@ -274,7 +302,6 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
 
     return (
         <>
-             {/* Age Tabs */}
             <div className="border-b border-border-color mb-0 bg-white">
                 <nav className="-mb-px flex space-x-8 px-6 overflow-x-auto" aria-label="Tabs">
                     {AGE_TABS.map((tab) => (
@@ -298,6 +325,7 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
               advices={paginatedAdvices}
               onEdit={openEditModal}
               onDelete={setAdviceToDelete}
+              onToggleStatus={handleToggleStatus}
             />
             <Pagination 
                 currentPage={currentPage}
@@ -335,6 +363,11 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
                 value={categoryFilter}
                 onChange={(val) => { setCategoryFilter(val); setCurrentPage(1); }}
                 labelPrefix="Catégorie : "
+              />
+              <Dropdown 
+                options={statusFilterOptions}
+                value={statusFilter}
+                onChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}
               />
               <Dropdown
                 options={sortOptions}

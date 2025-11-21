@@ -21,6 +21,7 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
   const [categoryId, setCategoryId] = useState('');
   const [day, setDay] = useState<number | null>(null);
   const [hasDayTargeting, setHasDayTargeting] = useState(false);
+  const [isActive, setIsActive] = useState(true);
   
   // Fixed size arrays: exactly 2 elements
   const [descriptions, setDescriptions] = useState<string[]>(['', '']);
@@ -35,6 +36,7 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
       if (advice) {
         setTitle(advice.title);
         setCategoryId(typeof advice.category === 'string' ? advice.category : advice.category._id);
+        setIsActive(advice.isActive !== false);
         
         // Timing logic
         if (advice.day !== null && advice.day !== undefined) {
@@ -58,6 +60,7 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
         // Defaults for new advice
         setTitle('');
         setCategoryId('');
+        setIsActive(true);
         setDay(null);
         setHasDayTargeting(false);
         setDescriptions(['', '']);
@@ -136,6 +139,7 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
       imageUrl: cleanImages,
       sources: cleanSources,
       day: finalDay,
+      isActive,
       minDay: null, // Always clear ranges as we removed range support
       maxDay: null
     };
@@ -191,6 +195,26 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
                                 onChange={setCategoryId} 
                             />
                         </div>
+                    </div>
+
+                    {/* Status */}
+                    <div>
+                        <label className="block text-sm font-medium text-text-secondary mb-3">Statut</label>
+                        <label className="flex items-center cursor-pointer w-fit select-none">
+                            <div className="relative">
+                                <input 
+                                    type="checkbox" 
+                                    className="sr-only" 
+                                    checked={isActive} 
+                                    onChange={(e) => setIsActive(e.target.checked)} 
+                                />
+                                <div className={`block w-10 h-6 rounded-full transition-colors ${isActive ? 'bg-premier' : 'bg-gray-300'}`}></div>
+                                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isActive ? 'transform translate-x-4' : ''}`}></div>
+                            </div>
+                            <div className="ml-3 text-sm font-medium text-text-secondary">
+                                {isActive ? 'Actif (Visible)' : 'Inactif (Masqué)'}
+                            </div>
+                        </label>
                     </div>
 
                     {/* Timing with Grid */}

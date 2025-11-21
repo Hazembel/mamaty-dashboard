@@ -29,7 +29,8 @@ const handleResponse = async (response: Response) => {
 };
 
 export const getRecipes = async (token: string): Promise<Recipe[]> => {
-  const response = await fetch(RECIPES_URL, {
+  // Add timestamp to prevent caching
+  const response = await fetch(`${RECIPES_URL}?t=${new Date().getTime()}`, {
     method: 'GET',
     headers: { 'Authorization': `Bearer ${token}` },
   });
@@ -68,4 +69,22 @@ export const deleteRecipe = async (token: string, recipeId: string): Promise<voi
     headers: { 'Authorization': `Bearer ${token}` },
   });
   await handleResponse(response);
+};
+
+export const activateRecipe = async (token: string, recipeId: string): Promise<Recipe> => {
+  const response = await fetch(`${RECIPES_URL}/${recipeId}/activate`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const data = await handleResponse(response);
+  return data.recipe || data;
+};
+
+export const deactivateRecipe = async (token: string, recipeId: string): Promise<Recipe> => {
+  const response = await fetch(`${RECIPES_URL}/${recipeId}/deactivate`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const data = await handleResponse(response);
+  return data.recipe || data;
 };

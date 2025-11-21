@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { Recipe, Category, Ingredient } from '../types';
-import { XIcon, PlusIcon, TrashIcon } from './icons';
+import { XIcon, PlusIcon, TrashIcon, ClockIcon, CalendarIcon } from './icons';
 import Dropdown from './Dropdown';
 import CreatableSelect from './CreatableSelect';
 import { tunisianCities } from '../lib/tunisianCities';
+import DatePicker from './DatePicker';
 
 interface RecipeModalProps {
   isOpen: boolean;
@@ -36,6 +37,11 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
   const [city, setCity] = useState('');
   const [minDay, setMinDay] = useState('270'); // 9 months
   const [maxDay, setMaxDay] = useState('720'); // 24 months
+  const [isActive, setIsActive] = useState(true);
+
+  // Scheduling
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
   
   // Ingredients as structured objects
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', quantity: 0, unit: 'g' }]);
@@ -61,6 +67,28 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
         setCity(recipe.city || '');
         setMinDay(recipe.minDay?.toString() || '270');
         setMaxDay(recipe.maxDay?.toString() || '720');
+        setIsActive(recipe.isActive !== false);
+
+        // Format scheduledAt
+        if (recipe.scheduledAt) {
+            try {
+                const date = new Date(recipe.scheduledAt);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                
+                setScheduledDate(`${year}-${month}-${day}`);
+                setScheduledTime(`${hours}:${minutes}`);
+            } catch (e) {
+                setScheduledDate('');
+                setScheduledTime('');
+            }
+        } else {
+            setScheduledDate('');
+            setScheduledTime('');
+        }
         
         setIngredients(recipe.ingredients && recipe.ingredients.length > 0 
             ? recipe.ingredients.map(i => ({
@@ -83,12 +111,29 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
         setCity('');
         setMinDay('270');
         setMaxDay('720');
+        setIsActive(true);
+        setScheduledDate('');
+        setScheduledTime('');
         setIngredients([{ name: '', quantity: 0, unit: 'g' }]);
         setInstructions(['']);
         setSources(['']);
       }
     }
   }, [isOpen, recipe]);
+
+  // Auto-update isActive when scheduling changes
+  useEffect(() => {
+    if (scheduledDate) {
+        const time = scheduledTime || '00:00';
+        const scheduleDate = new Date(`${scheduledDate}T${time}`);
+        const now = new Date();
+        if (!isNaN(scheduleDate.getTime()) && scheduleDate > now) {
+            setIsActive(false);
+        } else if (!isNaN(scheduleDate.getTime()) && scheduleDate <= now) {
+            setIsActive(true);
+        }
+    }
+  }, [scheduledDate, scheduledTime]);
 
   const handleInstructionChange = (index: number, value: string) => {
     setInstructions(prev => {
@@ -139,6 +184,13 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
       });
   };
 
+  const isFutureSchedule = () => {
+    if (!scheduledDate) return false;
+    const time = scheduledTime || '00:00';
+    const d = new Date(`${scheduledDate}T${time}`);
+    return !isNaN(d.getTime()) && d > new Date();
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -161,6 +213,16 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
         return;
     }
 
+    let finalScheduledAt = null;
+    if (scheduledDate) {
+        const time = scheduledTime || '00:00';
+        const dateStr = `${scheduledDate}T${time}`;
+        const dateObj = new Date(dateStr);
+        if (!isNaN(dateObj.getTime())) {
+             finalScheduledAt = dateObj.toISOString();
+        }
+    }
+
     const dataToSave: Partial<Recipe> = {
       title,
       description,
@@ -174,6 +236,8 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
       rating: parseFloat(rating),
       minDay: parseInt(minDay),
       maxDay: parseInt(maxDay),
+      isActive,
+      scheduledAt: finalScheduledAt
     };
 
     try {
@@ -197,6 +261,8 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
       { id: 'details', label: 'Ingrédients & Préparation' },
       { id: 'media', label: 'Média & Sources' },
   ];
+
+  const futureSchedule = isFutureSchedule();
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex items-center justify-center p-4" aria-modal="true" role="dialog">
@@ -244,6 +310,64 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                         <div>
                             <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-2">Description courte / Introduction</label>
                             <textarea required rows={4} id="description" value={description} onChange={(e) => setDescription(e.target.value)} className={inputBaseClass} />
+                        </div>
+
+                        {/* Scheduling & Status */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-2">Statut</label>
+                                <label className="flex items-center cursor-pointer w-fit select-none">
+                                    <div className="relative">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only" 
+                                            checked={isActive} 
+                                            onChange={(e) => {
+                                                if (futureSchedule) return;
+                                                setIsActive(e.target.checked);
+                                            }} 
+                                            disabled={futureSchedule}
+                                        />
+                                        <div className={`block w-10 h-6 rounded-full transition-colors ${isActive ? 'bg-premier' : 'bg-gray-300'} ${futureSchedule ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
+                                        <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isActive ? 'transform translate-x-4' : ''}`}></div>
+                                    </div>
+                                    <div className="ml-3 text-sm font-medium text-text-secondary">
+                                        {isActive ? 'Active (Visible)' : 'Inactive (Masquée)'}
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-2">Planification (Optionnel)</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs text-text-secondary mb-1">Date</label>
+                                         <div className="relative">
+                                            <DatePicker 
+                                                value={scheduledDate} 
+                                                onChange={setScheduledDate} 
+                                            />
+                                            <div className="absolute right-3 top-2.5 pointer-events-none text-gray-400">
+                                                <CalendarIcon className="h-5 w-5" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-text-secondary mb-1">Heure</label>
+                                         <div className="relative">
+                                            <input 
+                                                type="time" 
+                                                value={scheduledTime} 
+                                                onChange={(e) => setScheduledTime(e.target.value)} 
+                                                className={inputBaseClass} 
+                                            />
+                                            <div className="absolute right-3 top-2.5 pointer-events-none text-gray-400">
+                                                <ClockIcon className="h-5 w-5" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

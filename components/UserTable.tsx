@@ -9,7 +9,7 @@ interface UserTableProps {
   onEdit: (user: User) => void;
   onDelete: (user: User) => void;
   onViewDetails: (user: User, tab: 'babies' | 'doctors' | 'recipes' | 'articles') => void;
-  onGenderClick: (gender: 'Male' | 'Female' | 'Other') => void;
+  onGenderClick: (gender: 'male' | 'female' | 'other') => void;
 }
 
 const formatDate = (dateString?: string) => {
@@ -93,7 +93,7 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEdit, onDelete, onViewDe
                     onClick={() => user.gender && onGenderClick(user.gender)}
                     className="cursor-pointer hover:text-premier transition-colors"
                   >
-                    {user.gender === 'Male' ? 'Homme' : user.gender === 'Female' ? 'Femme' : 'Autre'}
+                    {user.gender === 'male' ? 'Homme' : user.gender === 'female' ? 'Femme' : 'Autre'}
                   </button>
                 ) : 'N/A'}
               </td>

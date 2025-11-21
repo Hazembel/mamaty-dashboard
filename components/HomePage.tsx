@@ -10,7 +10,7 @@ import { User, Baby, Doctor, Recipe, Article, Advice } from '../types';
 import { 
     UsersIcon, BabyIcon, DoctorIcon, ThumbUpIcon, ThumbDownIcon, 
     LightBulbIcon, DocumentTextIcon, CakeIcon, TrendingUpIcon, 
-    StarIcon, HeartIcon, LoadingSpinnerIcon 
+    StarIcon, HeartIcon, LoadingSpinnerIcon, EyeIcon 
 } from './icons';
 
 interface HomePageProps {
@@ -135,7 +135,7 @@ const HomePage: React.FC<HomePageProps> = ({ token }) => {
 
     // UI States
     const [activeTab, setActiveTab] = useState<'recipes' | 'articles' | 'advices' | 'doctors'>('recipes');
-    const [activeFilter, setActiveFilter] = useState<'likes' | 'dislikes' | 'favorites' | 'rating'>('likes');
+    const [activeFilter, setActiveFilter] = useState<'likes' | 'dislikes' | 'favorites' | 'rating' | 'views'>('views');
 
     // Fetch All Data
     useEffect(() => {
@@ -206,6 +206,8 @@ const HomePage: React.FC<HomePageProps> = ({ token }) => {
             sortFn = (a, b) => (favoritesMap[b._id] || 0) - (favoritesMap[a._id] || 0);
         } else if (activeFilter === 'rating') {
             sortFn = (a, b) => (b.rating || 0) - (a.rating || 0);
+        } else if (activeFilter === 'views') {
+            sortFn = (a, b) => (b.viewers?.length || 0) - (a.viewers?.length || 0);
         }
 
         return items.sort(sortFn).slice(0, 5);
@@ -215,19 +217,19 @@ const HomePage: React.FC<HomePageProps> = ({ token }) => {
     // Reset filter when tab changes if the filter isn't applicable
     useEffect(() => {
         if (activeTab === 'doctors') {
-            // Doctors support 'rating' and 'favorites'
-            if (activeFilter === 'likes' || activeFilter === 'dislikes') {
+            // Doctors support 'rating' and 'favorites', but not 'views' in this context usually
+            if (activeFilter === 'likes' || activeFilter === 'dislikes' || activeFilter === 'views') {
                 setActiveFilter('rating');
             }
         } else if (activeTab === 'advices') {
-             // Advices support 'likes' and 'dislikes' (favorites not tracked on user object)
+             // Advices support 'likes', 'dislikes', 'views' (favorites not tracked on user object)
              if (activeFilter === 'rating' || activeFilter === 'favorites') {
-                setActiveFilter('likes');
+                setActiveFilter('views');
             }
         } else {
-            // Recipes/Articles support 'likes', 'dislikes', 'favorites'
+            // Recipes/Articles support 'likes', 'dislikes', 'favorites', 'views'
             if (activeFilter === 'rating') {
-                setActiveFilter('likes');
+                setActiveFilter('views');
             }
         }
     }, [activeTab]);
@@ -292,6 +294,17 @@ const HomePage: React.FC<HomePageProps> = ({ token }) => {
 
                     {/* Filters */}
                     <div className="flex flex-wrap items-center gap-3 mt-6">
+                         {/* Views: Not for Doctors */}
+                         {activeTab !== 'doctors' && (
+                            <FilterButton 
+                                active={activeFilter === 'views'} 
+                                label="Les plus vus" 
+                                icon={EyeIcon} 
+                                onClick={() => setActiveFilter('views')}
+                                colorClass="text-blue-600"
+                            />
+                        )}
+
                         {/* Likes / Dislikes : Not for Doctors */}
                         {activeTab !== 'doctors' && (
                             <>
@@ -371,7 +384,11 @@ const HomePage: React.FC<HomePageProps> = ({ token }) => {
                             }
 
                             // Stats Extraction based on Active Filter
-                            if (activeFilter === 'likes') {
+                            if (activeFilter === 'views') {
+                                statValue = item.viewers?.length || 0;
+                                statIcon = EyeIcon;
+                                statColor = 'text-blue-600 bg-blue-50 border-blue-100';
+                            } else if (activeFilter === 'likes') {
                                 statValue = item.likes?.length || 0;
                                 statIcon = ThumbUpIcon;
                                 statColor = 'text-green-600 bg-green-50 border-green-100';

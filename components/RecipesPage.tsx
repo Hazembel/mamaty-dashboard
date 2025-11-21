@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { getRecipes, createRecipe, updateRecipe, deleteRecipe } from '../services/recipeService';
+import { getRecipes, createRecipe, updateRecipe, deleteRecipe, activateRecipe, deactivateRecipe } from '../services/recipeService';
 import { getCategories } from '../services/categoryService';
 import { Recipe, Category } from '../types';
 import Pagination from './Pagination';
@@ -54,6 +54,7 @@ const RecipesPage: React.FC<RecipesPageProps> = ({ token, onLogout }) => {
   
   const [sortOption, setSortOption] = useState('createdAt-desc');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -65,6 +66,15 @@ const RecipesPage: React.FC<RecipesPageProps> = ({ token, onLogout }) => {
     { value: 'title-asc', label: 'Titre (A-Z)' },
     { value: 'title-desc', label: 'Titre (Z-A)' },
     { value: 'rating-desc', label: 'Mieux notés' },
+    { value: 'updatedAt-desc', label: 'Dernière modification' },
+    { value: 'scheduledAt-desc', label: 'Date de planification' },
+    { value: 'viewers-desc', label: 'Vues (Décroissant)' },
+  ];
+
+  const statusFilterOptions: DropdownOption[] = [
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
   ];
 
   // Filter categories for 'recipe' type
@@ -146,12 +156,23 @@ const RecipesPage: React.FC<RecipesPageProps> = ({ token, onLogout }) => {
           if (categoryFilter === 'all') return true;
           const catId = typeof recipe.category === 'object' ? recipe.category._id : recipe.category;
           return catId === categoryFilter;
+      })
+      .filter(recipe => {
+          if (statusFilter === 'all') return true;
+          const isActive = recipe.isActive !== false;
+          return statusFilter === 'active' ? isActive : !isActive;
       });
 
     if (sortOption) {
         const [key, direction] = sortOption.split('-') as [string, 'asc' | 'desc'];
         
         filtered.sort((a: any, b: any) => {
+            if (key === 'viewers') {
+                const aVal = a.viewers?.length || 0;
+                const bVal = b.viewers?.length || 0;
+                return direction === 'desc' ? bVal - aVal : aVal - bVal;
+            }
+
             const aVal = a[key];
             const bVal = b[key];
             if (aVal == null) return 1;
@@ -171,7 +192,7 @@ const RecipesPage: React.FC<RecipesPageProps> = ({ token, onLogout }) => {
     }
 
     return filtered;
-  }, [recipes, searchTerm, sortOption, categoryFilter]);
+  }, [recipes, searchTerm, sortOption, categoryFilter, statusFilter]);
 
   const paginatedRecipes = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -203,6 +224,25 @@ const RecipesPage: React.FC<RecipesPageProps> = ({ token, onLogout }) => {
       throw err;
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleStatus = async (recipe: Recipe) => {
+    try {
+        const isActive = recipe.isActive !== false;
+        let updatedRecipe;
+        
+        if (isActive) {
+            updatedRecipe = await deactivateRecipe(token, recipe._id);
+            showToast('Recette désactivée.', 'success');
+        } else {
+            updatedRecipe = await activateRecipe(token, recipe._id);
+            showToast('Recette activée.', 'success');
+        }
+        setRecipes(recipes.map(r => r._id === updatedRecipe._id ? { ...r, ...updatedRecipe } : r));
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Impossible de modifier le statut.";
+        showToast(errorMessage, 'error');
     }
   };
 
@@ -243,6 +283,7 @@ const RecipesPage: React.FC<RecipesPageProps> = ({ token, onLogout }) => {
               categories={categories}
               onEdit={openEditModal}
               onDelete={setRecipeToDelete}
+              onToggleStatus={handleToggleStatus}
             />
             <Pagination 
                 currentPage={currentPage}
@@ -280,6 +321,11 @@ const RecipesPage: React.FC<RecipesPageProps> = ({ token, onLogout }) => {
                 value={categoryFilter}
                 onChange={(val) => { setCategoryFilter(val); setCurrentPage(1); }}
                 labelPrefix="Catégorie : "
+              />
+               <Dropdown 
+                options={statusFilterOptions}
+                value={statusFilter}
+                onChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}
               />
               <Dropdown
                 options={sortOptions}

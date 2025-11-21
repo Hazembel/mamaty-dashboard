@@ -1,16 +1,17 @@
 
 import React from 'react';
 import { Recipe, Category } from '../types';
-import { TrashIcon, PencilIcon, ThumbUpIcon, ThumbDownIcon } from './icons';
+import { TrashIcon, PencilIcon, ThumbUpIcon, ThumbDownIcon, EyeIcon } from './icons';
 
 interface RecipeTableProps {
   recipes: Recipe[];
   categories: Category[];
   onEdit: (recipe: Recipe) => void;
   onDelete: (recipe: Recipe) => void;
+  onToggleStatus: (recipe: Recipe) => void;
 }
 
-const RecipeTable: React.FC<RecipeTableProps> = ({ recipes, categories, onEdit, onDelete }) => {
+const RecipeTable: React.FC<RecipeTableProps> = ({ recipes, categories, onEdit, onDelete, onToggleStatus }) => {
   const getCategoryName = (recipe: Recipe) => {
     if (typeof recipe.category === 'object' && recipe.category) {
       return recipe.category.name;
@@ -46,7 +47,10 @@ const RecipeTable: React.FC<RecipeTableProps> = ({ recipes, categories, onEdit, 
               Sources
             </th>
              <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
-              Réactions
+              Statistiques
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
+              Statut
             </th>
             <th scope="col" className="relative px-6 py-3">
               <span className="sr-only">Actions</span>
@@ -56,6 +60,8 @@ const RecipeTable: React.FC<RecipeTableProps> = ({ recipes, categories, onEdit, 
         <tbody className="bg-white divide-y divide-border-color">
           {recipes.map((recipe) => {
              const categoryName = getCategoryName(recipe);
+             const isActive = recipe.isActive !== false;
+             const isScheduled = recipe.scheduledAt && new Date(recipe.scheduledAt) > new Date();
              
              return (
               <tr key={recipe._id}>
@@ -106,16 +112,42 @@ const RecipeTable: React.FC<RecipeTableProps> = ({ recipes, categories, onEdit, 
                     )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 text-green-600">
-                            <ThumbUpIcon className="h-4 w-4" />
-                            <span className="font-medium">{recipe.likes ? recipe.likes.length : 0}</span>
+                    <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1 text-green-600" title="J'aime">
+                                <ThumbUpIcon className="h-4 w-4" />
+                                <span className="font-medium">{recipe.likes ? recipe.likes.length : 0}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-red-500" title="Je n'aime pas">
+                                <ThumbDownIcon className="h-4 w-4" />
+                                <span className="font-medium">{recipe.dislikes ? recipe.dislikes.length : 0}</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-1 text-red-500">
-                            <ThumbDownIcon className="h-4 w-4" />
-                            <span className="font-medium">{recipe.dislikes ? recipe.dislikes.length : 0}</span>
-                        </div>
+                         <div className="flex items-center gap-1 text-gray-500" title="Vues">
+                          <EyeIcon className="h-4 w-4" />
+                          <span className="font-medium">{recipe.viewers ? recipe.viewers.length : 0}</span>
+                      </div>
                     </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                   {isScheduled ? (
+                       <span className="inline-flex flex-col items-start">
+                           <span className="px-2 py-1 text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 mb-1">
+                               Planifié
+                           </span>
+                           <span className="text-xs text-text-secondary">
+                               {new Date(recipe.scheduledAt!).toLocaleDateString('fr-FR')} {new Date(recipe.scheduledAt!).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
+                           </span>
+                       </span>
+                   ) : (
+                       <button 
+                          onClick={() => onToggleStatus(recipe)}
+                          className={`inline-flex px-2 py-1 text-xs leading-5 font-semibold rounded-full cursor-pointer transition-colors ${isActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'}`}
+                          title="Cliquez pour changer le statut"
+                        >
+                          {isActive ? 'Active' : 'Inactive'}
+                        </button>
+                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center justify-end space-x-2">

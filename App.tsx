@@ -25,6 +25,7 @@ const App: React.FC = () => {
   
   const handleLogout = useCallback(() => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
     setToken(null);
   }, []);
 

@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, FormEvent } from 'react';
 import { Baby } from '../types';
 import { XIcon } from './icons';
-import DatePicker from './DatePicker';
 import Dropdown from './Dropdown';
+import DatePicker from './DatePicker';
 
 interface BabyModalProps {
   isOpen: boolean;
@@ -48,7 +49,11 @@ const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby
               }
 
               if (!isNaN(date.getTime())) {
-                formattedBirthday = date.toISOString().split('T')[0];
+                // Format to YYYY-MM-DD using local components
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                formattedBirthday = `${y}-${m}-${d}`;
               }
             } catch (e) { console.error("Could not parse birthday:", baby.birthday); }
           }
@@ -129,26 +134,28 @@ const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby
                     />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
-                <div>
+              
+              <div>
                   <label htmlFor="birthday" className="block text-sm font-medium text-text-secondary mb-1">Date de naissance</label>
-                  <DatePicker
-                      id="birthday"
-                      name="birthday"
-                      value={formData.birthday}
-                      onChange={(date) => setFormData(prev => ({...prev, birthday: date}))}
+                  <DatePicker 
+                      id="birthday" 
+                      name="birthday" 
+                      value={formData.birthday} 
+                      onChange={(date) => setFormData(prev => ({ ...prev, birthday: date }))} 
                   />
-                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                   <label htmlFor="headSize" className="block text-sm font-medium text-text-secondary mb-1">Périmètre crânien (cm)</label>
                   <input type="number" step="0.1" name="headSize" id="headSize" value={formData.headSize} onChange={handleChange} className={inputBaseClass} />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                   <label htmlFor="weight" className="block text-sm font-medium text-text-secondary mb-1">Poids (kg)</label>
                   <input type="number" step="0.1" name="weight" id="weight" value={formData.weight} onChange={handleChange} className={inputBaseClass} />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                   <label htmlFor="height" className="block text-sm font-medium text-text-secondary mb-1">Taille (cm)</label>
                   <input type="number" step="0.1" name="height" id="height" value={formData.height} onChange={handleChange} className={inputBaseClass} />

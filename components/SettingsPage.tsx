@@ -43,15 +43,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ token }) => {
 
     setIsSubmitting(true);
     try {
-      // Use simulated service
       await changePassword(token, currentPassword, newPassword);
       setSecurityMessage({ text: "Mot de passe modifié avec succès.", type: 'success' });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-        // Since we don't have a real backend for this in the mock, we might get an error
-        // For the UI demo, we'll simulate success mostly, but handle error strings
         const msg = err instanceof Error ? err.message : "Erreur lors du changement de mot de passe.";
         setSecurityMessage({ text: msg, type: 'error' });
     } finally {
@@ -85,7 +82,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ token }) => {
   const tabs = [
     { id: 'general', label: 'Général', icon: BellIcon },
     { id: 'security', label: 'Sécurité', icon: ShieldCheckIcon },
-    { id: 'appearance', label: 'Apparence', icon: EyeIcon }, // Reusing EyeIcon or similar
+    { id: 'appearance', label: 'Apparence', icon: EyeIcon },
     { id: 'data', label: 'Données', icon: DownloadIcon },
   ];
 

@@ -1,15 +1,16 @@
 
 import React from 'react';
 import { Advice } from '../types';
-import { TrashIcon, PencilIcon, ThumbUpIcon, ThumbDownIcon } from './icons';
+import { TrashIcon, PencilIcon, ThumbUpIcon, ThumbDownIcon, EyeIcon } from './icons';
 
 interface AdviceTableProps {
   advices: Advice[];
   onEdit: (advice: Advice) => void;
   onDelete: (advice: Advice) => void;
+  onToggleStatus: (advice: Advice) => void;
 }
 
-const AdviceTable: React.FC<AdviceTableProps> = ({ advices, onEdit, onDelete }) => {
+const AdviceTable: React.FC<AdviceTableProps> = ({ advices, onEdit, onDelete, onToggleStatus }) => {
   
   const isValidNumber = (val: any): boolean => {
     return val !== null && val !== undefined && !isNaN(Number(val));
@@ -33,10 +34,10 @@ const AdviceTable: React.FC<AdviceTableProps> = ({ advices, onEdit, onDelete }) 
               Ciblage (Jours)
             </th>
              <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
-              Sources
+              Statistiques
             </th>
              <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
-              Réactions
+              Statut
             </th>
             <th scope="col" className="relative px-6 py-3">
               <span className="sr-only">Actions</span>
@@ -44,7 +45,10 @@ const AdviceTable: React.FC<AdviceTableProps> = ({ advices, onEdit, onDelete }) 
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-border-color">
-          {advices.map((advice) => (
+          {advices.map((advice) => {
+            const isActive = advice.isActive !== false; // Default to active
+
+            return (
             <tr key={advice._id}>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="h-12 w-12 rounded-lg bg-gray-200 overflow-hidden">
@@ -83,30 +87,32 @@ const AdviceTable: React.FC<AdviceTableProps> = ({ advices, onEdit, onDelete }) 
                     <span className="text-gray-400">-</span>
                 )}
               </td>
-              <td className="px-6 py-4 text-sm text-text-secondary">
-                {advice.sources && advice.sources.length > 0 ? (
-                   <div className="flex flex-wrap gap-1.5">
-                       {advice.sources.map((source, idx) => (
-                           <span key={idx} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
-                               {source.toUpperCase()}
-                           </span>
-                       ))}
-                   </div>
-                ) : (
-                    <span className="text-gray-400 italic">Aucune</span>
-                )}
-              </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 text-green-600">
-                        <ThumbUpIcon className="h-4 w-4" />
-                        <span className="font-medium">{advice.likes ? advice.likes.length : 0}</span>
+                <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-green-600" title="J'aime">
+                            <ThumbUpIcon className="h-4 w-4" />
+                            <span className="font-medium">{advice.likes ? advice.likes.length : 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-red-500" title="Je n'aime pas">
+                            <ThumbDownIcon className="h-4 w-4" />
+                            <span className="font-medium">{advice.dislikes ? advice.dislikes.length : 0}</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-1 text-red-500">
-                        <ThumbDownIcon className="h-4 w-4" />
-                        <span className="font-medium">{advice.dislikes ? advice.dislikes.length : 0}</span>
+                    <div className="flex items-center gap-1 text-gray-500" title="Vues">
+                          <EyeIcon className="h-4 w-4" />
+                          <span className="font-medium">{advice.viewers ? advice.viewers.length : 0}</span>
                     </div>
                 </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                   <button 
+                      onClick={() => onToggleStatus(advice)}
+                      className={`inline-flex px-2 py-1 text-xs leading-5 font-semibold rounded-full cursor-pointer transition-colors ${isActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'}`}
+                      title="Cliquez pour changer le statut"
+                    >
+                      {isActive ? 'Actif' : 'Inactif'}
+                    </button>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end space-x-2">
@@ -127,7 +133,8 @@ const AdviceTable: React.FC<AdviceTableProps> = ({ advices, onEdit, onDelete }) 
                 </div>
               </td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
     </div>

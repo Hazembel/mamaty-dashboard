@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { getArticles, createArticle, updateArticle, deleteArticle } from '../services/articleService';
+import { getArticles, createArticle, updateArticle, deleteArticle, activateArticle, deactivateArticle } from '../services/articleService';
 import { getCategories } from '../services/categoryService';
 import { Article, Category } from '../types';
 import Pagination from './Pagination';
@@ -54,16 +54,26 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ token, onLogout }) => {
   
   const [sortOption, setSortOption] = useState('createdAt-desc');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
   };
   
   const sortOptions: DropdownOption[] = [
-    { value: 'createdAt-desc', label: 'Plus récent' },
-    { value: 'createdAt-asc', label: 'Plus ancien' },
+    { value: 'createdAt-desc', label: 'Plus récent (Création)' },
+    { value: 'createdAt-asc', label: 'Plus ancien (Création)' },
+    { value: 'updatedAt-desc', label: 'Dernière modification' },
+    { value: 'scheduledAt-desc', label: 'Date de planification' },
     { value: 'title-asc', label: 'Titre (A-Z)' },
     { value: 'title-desc', label: 'Titre (Z-A)' },
+    { value: 'viewers-desc', label: 'Vues (Décroissant)' },
+  ];
+  
+  const statusFilterOptions: DropdownOption[] = [
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'active', label: 'Actif' },
+    { value: 'inactive', label: 'Inactif' },
   ];
 
   // Filter categories to only show those relevant to 'article'
@@ -129,12 +139,24 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ token, onLogout }) => {
           if (categoryFilter === 'all') return true;
           const catId = typeof article.category === 'object' ? article.category._id : article.category;
           return catId === categoryFilter;
+      })
+      .filter(article => {
+          if (statusFilter === 'all') return true;
+          // Treat undefined as true (Active) to match legacy data and modal behavior
+          const isActive = article.isActive !== false;
+          return statusFilter === 'active' ? isActive : !isActive;
       });
 
     if (sortOption) {
         const [key, direction] = sortOption.split('-') as [string, 'asc' | 'desc'];
         
         filtered.sort((a: any, b: any) => {
+            if (key === 'viewers') {
+                 const aVal = a.viewers?.length || 0;
+                 const bVal = b.viewers?.length || 0;
+                 return direction === 'desc' ? bVal - aVal : aVal - bVal;
+            }
+
             const aVal = a[key];
             const bVal = b[key];
             if (aVal == null) return 1;
@@ -152,7 +174,7 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ token, onLogout }) => {
     }
 
     return filtered;
-  }, [articles, searchTerm, sortOption, categoryFilter]);
+  }, [articles, searchTerm, sortOption, categoryFilter, statusFilter]);
 
   const paginatedArticles = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -185,6 +207,26 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ token, onLogout }) => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleToggleStatus = async (article: Article) => {
+      try {
+          const isActive = article.isActive !== false; // Current status (undefined = true)
+          let updatedArticle;
+          
+          if (isActive) {
+              updatedArticle = await deactivateArticle(token, article._id);
+              showToast('Article désactivé.', 'success');
+          } else {
+              updatedArticle = await activateArticle(token, article._id);
+              showToast('Article activé.', 'success');
+          }
+          // Update local state
+          setArticles(articles.map(a => a._id === updatedArticle._id ? { ...a, ...updatedArticle } : a));
+      } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : "Impossible de modifier le statut.";
+          showToast(errorMessage, 'error');
+      }
   };
 
   const handleConfirmDelete = async () => {
@@ -223,6 +265,7 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ token, onLogout }) => {
               articles={paginatedArticles}
               onEdit={openEditModal}
               onDelete={setArticleToDelete}
+              onToggleStatus={handleToggleStatus}
             />
             <Pagination 
                 currentPage={currentPage}
@@ -260,6 +303,11 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ token, onLogout }) => {
                 value={categoryFilter}
                 onChange={(val) => { setCategoryFilter(val); setCurrentPage(1); }}
                 labelPrefix="Catégorie : "
+              />
+              <Dropdown 
+                options={statusFilterOptions}
+                value={statusFilter}
+                onChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}
               />
               <Dropdown
                 options={sortOptions}

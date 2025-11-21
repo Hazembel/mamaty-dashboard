@@ -6,7 +6,7 @@ import { User, Category } from '../types';
 import UserTable from './UserTable';
 import Pagination from './Pagination';
 import PageLayout from './PageLayout';
-import { SearchIcon, LoadingSpinnerIcon, XIcon } from './icons';
+import { SearchIcon, LoadingSpinnerIcon, XIcon, PlusIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 import EditUserModal from './EditUserModal';
 import UserDetailsModal from './UserDetailsModal';
@@ -60,7 +60,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [sortOption, setSortOption] = useState('createdAt-desc');
-  const [genderFilter, setGenderFilter] = useState<'all' | 'Male' | 'Female' | 'Other'>('all');
+  const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female' | 'other'>('all');
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -75,9 +75,9 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
 
   const genderFilterOptions: DropdownOption[] = [
     { value: 'all', label: 'Tous' },
-    { value: 'Male', label: 'Homme' },
-    { value: 'Female', label: 'Femme' },
-    { value: 'Other', label: 'Autre' },
+    { value: 'male', label: 'Homme' },
+    { value: 'female', label: 'Femme' },
+    { value: 'other', label: 'Autre' },
   ];
 
 
@@ -121,7 +121,9 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
       .filter(user => {
         if (genderFilter === 'all') return true;
         return user.gender === genderFilter;
-      });
+      })
+      // Filter out admins to show only users
+      .filter(user => user.role !== 'admin');
 
 
     if (sortOption) {
@@ -208,7 +210,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
     setDetailsTab(tab);
   };
 
-  const handleGenderClick = (gender: 'Male' | 'Female' | 'Other') => {
+  const handleGenderClick = (gender: 'male' | 'female' | 'other') => {
     setGenderFilter(gender);
     setCurrentPage(1);
   };
@@ -248,6 +250,14 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
                 labelPrefix="Trier par : "
               />
             </div>
+            
+            <button 
+              onClick={openAddModal}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-premier hover:bg-premier-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier transition-colors"
+            >
+                <PlusIcon className="h-5 w-5" />
+                <span>Ajouter</span>
+            </button>
           </div>
         }
       >

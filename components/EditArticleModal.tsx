@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { Article, Category } from '../types';
-import { XIcon, PlusIcon, TrashIcon } from './icons';
+import { XIcon, PlusIcon, TrashIcon, ClockIcon, CalendarIcon } from './icons';
 import Dropdown from './Dropdown';
 import CreatableSelect from './CreatableSelect';
+import DatePicker from './DatePicker';
 
 interface ArticleModalProps {
   isOpen: boolean;
@@ -18,6 +19,11 @@ interface ArticleModalProps {
 const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave, article, categories, isLoading, existingSources = [] }) => {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [isActive, setIsActive] = useState(true);
+  
+  // Split schedule into date and time
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
   
   // Fixed size arrays: exactly 2 elements for description and images
   const [descriptions, setDescriptions] = useState<string[]>(['', '']);
@@ -33,6 +39,30 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
         setTitle(article.title);
         setCategoryId(typeof article.category === 'string' ? article.category : article.category._id);
         
+        // Treat undefined as true (Active) to prevent accidental deactivation of legacy articles
+        setIsActive(article.isActive !== false);
+        
+        // Format scheduledAt for separate inputs
+        if (article.scheduledAt) {
+            try {
+                const date = new Date(article.scheduledAt);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                
+                setScheduledDate(`${year}-${month}-${day}`);
+                setScheduledTime(`${hours}:${minutes}`);
+            } catch (e) {
+                setScheduledDate('');
+                setScheduledTime('');
+            }
+        } else {
+            setScheduledDate('');
+            setScheduledTime('');
+        }
+        
         const desc = article.description || [];
         setDescriptions([desc[0] || '', desc[1] || '']);
         
@@ -45,12 +75,29 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
         // Defaults for new article
         setTitle('');
         setCategoryId('');
+        setIsActive(true); // Default to active for new articles
+        setScheduledDate('');
+        setScheduledTime('');
         setDescriptions(['', '']);
         setImageUrls(['', '']);
         setSources(['']);
       }
     }
   }, [isOpen, article]);
+
+  // Auto-update isActive when scheduling changes
+  useEffect(() => {
+    if (scheduledDate) {
+        const time = scheduledTime || '00:00';
+        const scheduleDate = new Date(`${scheduledDate}T${time}`);
+        const now = new Date();
+        if (!isNaN(scheduleDate.getTime()) && scheduleDate > now) {
+            setIsActive(false);
+        } else if (!isNaN(scheduleDate.getTime()) && scheduleDate <= now) {
+            setIsActive(true);
+        }
+    }
+  }, [scheduledDate, scheduledTime]);
 
   const handleFixedArrayChange = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number, value: string) => {
     setter(prev => {
@@ -69,6 +116,13 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
   };
   const addSource = () => setSources(prev => [...prev, '']);
   const removeSource = (index: number) => setSources(prev => prev.filter((_, i) => i !== index));
+
+  const isFutureSchedule = () => {
+    if (!scheduledDate) return false;
+    const time = scheduledTime || '00:00';
+    const d = new Date(`${scheduledDate}T${time}`);
+    return !isNaN(d.getTime()) && d > new Date();
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -92,12 +146,25 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
         return;
     }
 
+    let finalScheduledAt = null;
+    if (scheduledDate) {
+        const time = scheduledTime || '00:00';
+        // Ensure we create a valid date string
+        const dateStr = `${scheduledDate}T${time}`;
+        const dateObj = new Date(dateStr);
+        if (!isNaN(dateObj.getTime())) {
+             finalScheduledAt = dateObj.toISOString();
+        }
+    }
+
     const dataToSave: Partial<Article> = {
       title,
       category: categoryId,
       description: cleanDescriptions,
       imageUrl: cleanImages,
       sources: cleanSources,
+      isActive, 
+      scheduledAt: finalScheduledAt, 
     };
 
     try {
@@ -115,6 +182,8 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
   
   const inputBaseClass = "w-full bg-background rounded-lg py-2.5 px-4 text-text-primary placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-premier focus:bg-white transition-colors";
   const categoryOptions = [{ value: '', label: 'Sélectionner une catégorie' }, ...categories.map(c => ({ value: c._id, label: c.name }))];
+
+  const futureSchedule = isFutureSchedule();
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-40 overflow-y-auto p-4 sm:p-6" aria-modal="true" role="dialog">
@@ -145,6 +214,71 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
                                 value={categoryId} 
                                 onChange={setCategoryId} 
                             />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Status */}
+                        <div>
+                            <label className="block text-sm font-medium text-text-secondary mb-3">Statut</label>
+                            <label className="flex items-center cursor-pointer w-fit select-none">
+                                <div className="relative">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only" 
+                                        checked={isActive} 
+                                        onChange={(e) => {
+                                            // Only allow manual toggle if no future schedule is set
+                                            if (futureSchedule) {
+                                                return; // Locked
+                                            }
+                                            setIsActive(e.target.checked);
+                                        }} 
+                                        disabled={futureSchedule}
+                                    />
+                                    <div className={`block w-10 h-6 rounded-full transition-colors ${isActive ? 'bg-premier' : 'bg-gray-300'} ${futureSchedule ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
+                                    <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isActive ? 'transform translate-x-4' : ''}`}></div>
+                                </div>
+                                <div className="ml-3 text-sm font-medium text-text-secondary">
+                                    {isActive ? 'Actif (Visible)' : 'Inactif (Masqué)'}
+                                </div>
+                            </label>
+                        </div>
+
+                        {/* Scheduling */}
+                        <div>
+                            <label className="block text-sm font-medium text-text-secondary mb-3">Planification (Optionnel)</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs text-text-secondary mb-1">Date</label>
+                                    <div className="relative">
+                                        <DatePicker 
+                                            value={scheduledDate} 
+                                            onChange={setScheduledDate} 
+                                        />
+                                        <div className="absolute right-3 top-2.5 pointer-events-none text-gray-400">
+                                            <CalendarIcon className="h-5 w-5" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-text-secondary mb-1">Heure</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="time" 
+                                            value={scheduledTime} 
+                                            onChange={(e) => setScheduledTime(e.target.value)} 
+                                            className={inputBaseClass} 
+                                        />
+                                        <div className="absolute right-3 top-2.5 pointer-events-none text-gray-400">
+                                            <ClockIcon className="h-5 w-5" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                             <p className="text-xs text-text-secondary mt-2">
+                                Si une date future est sélectionnée, le statut passera automatiquement à "Inactif".
+                            </p>
                         </div>
                     </div>
 
@@ -243,12 +377,12 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
                                             options={existingSources}
                                             value={source}
                                             onChange={(val) => handleSourceChange(idx, val.toUpperCase())}
-                                            placeholder="ex: REVUE MÉDICALE"
+                                            placeholder="ex: OMS, AFPA..."
                                         />
                                     </div>
                                     {sources.length > 1 && (
                                         <button type="button" onClick={() => removeSource(idx)} className="text-text-secondary hover:text-red-500 p-2">
-                                            <TrashIcon className="h-5 w-5" />
+                                            <XIcon className="h-5 w-5" />
                                         </button>
                                     )}
                                 </div>
