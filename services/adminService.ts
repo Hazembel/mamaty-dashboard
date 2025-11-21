@@ -6,7 +6,7 @@ const ADMIN_URL = `${API_BASE_URL}/admin`;
 
 export const loginAdmin = async (email: string, password: string): Promise<string> => {
   const loginUrl = `${ADMIN_URL}/login`;
-  console.log(`[LOGIN ATTEMPT] Tentative de connexion à: ${loginUrl}`);
+  //console.log(`[LOGIN ATTEMPT] Tentative de connexion à: ${loginUrl}`);
 
   try {
     const response = await fetch(loginUrl, {
@@ -17,12 +17,12 @@ export const loginAdmin = async (email: string, password: string): Promise<strin
       body: JSON.stringify({ email, password }),
     });
 
-    console.log('[LOGIN RESPONSE] Réponse brute du serveur:', response);
-    console.log(`[LOGIN RESPONSE] Statut: ${response.status} ${response.statusText}`);
+    //console.log('[LOGIN RESPONSE] Réponse brute du serveur:', response);
+    //console.log(`[LOGIN RESPONSE] Statut: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error('[LOGIN ERROR] Corps de la réponse brute (erreur):', errorBody);
+      //console.error('[LOGIN ERROR] Corps de la réponse brute (erreur):', errorBody);
 
       let errorData;
       try {
@@ -44,7 +44,7 @@ export const loginAdmin = async (email: string, password: string): Promise<strin
     }
 
     const data = await response.json();
-    console.log('[LOGIN SUCCESS] Données de la réponse analysées:', data);
+   // console.log('[LOGIN SUCCESS] Données de la réponse analysées:', data);
 
     if (!data.token) {
       console.error('[LOGIN ERROR] Token non trouvé dans la réponse JSON.');
@@ -54,11 +54,11 @@ export const loginAdmin = async (email: string, password: string): Promise<strin
     // Cache user if provided in login response (check for .user, .admin, .data, or flat object)
     const userObj = data.user || data.admin || data.data;
     if (userObj) {
-        console.log('[LOGIN SUCCESS] Utilisateur trouvé, mise en cache.');
+   //     console.log('[LOGIN SUCCESS] Utilisateur trouvé, mise en cache.');
         localStorage.setItem('currentUser', JSON.stringify(userObj));
     }
 
-    console.log('[LOGIN SUCCESS] Connexion réussie, token reçu.');
+  //  console.log('[LOGIN SUCCESS] Connexion réussie, token reçu.');
     return data.token;
 
   } catch (error) {
