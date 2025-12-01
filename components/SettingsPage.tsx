@@ -27,6 +27,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ token }) => {
   // Theme State
   const [selectedThemeId, setSelectedThemeId] = useState<string>('violet');
 
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity("Veuillez remplir ce champ.");
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity('');
+  };
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setSecurityMessage(null);
@@ -161,6 +169,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ token }) => {
                                 required 
                                 value={currentPassword}
                                 onChange={(e) => setCurrentPassword(e.target.value)}
+                                onInvalid={handleInvalid}
+                                onInput={handleInput}
                                 className="w-full rounded-lg border-border-color bg-background py-2.5 px-4 text-text-primary focus:ring-2 focus:ring-premier focus:bg-white transition-colors"
                             />
                         </div>
@@ -171,6 +181,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ token }) => {
                                 required 
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
+                                onInvalid={handleInvalid}
+                                onInput={handleInput}
                                 className="w-full rounded-lg border-border-color bg-background py-2.5 px-4 text-text-primary focus:ring-2 focus:ring-premier focus:bg-white transition-colors"
                             />
                         </div>
@@ -181,6 +193,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ token }) => {
                                 required 
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
+                                onInvalid={handleInvalid}
+                                onInput={handleInput}
                                 className="w-full rounded-lg border-border-color bg-background py-2.5 px-4 text-text-primary focus:ring-2 focus:ring-premier focus:bg-white transition-colors"
                             />
                         </div>

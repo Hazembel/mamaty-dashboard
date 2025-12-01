@@ -133,3 +133,29 @@ export interface Recipe {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface FAQ {
+  _id: string;
+  question: string;
+  answer: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SocialItem {
+  _id?: string;
+  icon: string;
+  title: string;
+  subtitle: string;
+  url: string;
+}
+
+export interface ContactInfo {
+  _id: string;
+  phone: string;
+  email: string;
+  description: string;
+  socials: SocialItem[];
+  createdAt?: string;
+  updatedAt?: string;
+}

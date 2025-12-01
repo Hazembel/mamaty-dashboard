@@ -191,25 +191,62 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
     return !isNaN(d.getTime()) && d > new Date();
   };
 
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity("Veuillez remplir ce champ.");
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity('');
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
+    // --- INFO TAB VALIDATION ---
+    if (!title.trim()) {
+        setActiveTab('info');
+        setError("Le titre de la recette est obligatoire.");
+        return;
+    }
     if (!categoryId) {
+        setActiveTab('info');
         setError("Veuillez sélectionner une catégorie.");
         return;
     }
-    
+    if (!description.trim()) {
+        setActiveTab('info');
+        setError("La description est obligatoire.");
+        return;
+    }
+
+    // --- DETAILS TAB VALIDATION ---
     const cleanIngredients = ingredients.filter(i => i.name.trim() !== '');
     const cleanInstructions = instructions.filter(i => i.trim() !== '');
-    const cleanSources = sources.filter(s => s.trim() !== '');
-
+    
     if (cleanIngredients.length === 0) {
+        setActiveTab('details');
         setError("Veuillez ajouter au moins un ingrédient avec un nom.");
         return;
     }
     if (cleanInstructions.length === 0) {
+        setActiveTab('details');
         setError("Veuillez ajouter au moins une étape de préparation.");
+        return;
+    }
+
+    // --- MEDIA TAB VALIDATION ---
+    const cleanSources = sources.filter(s => s.trim() !== '');
+
+    if (!imageUrl.trim()) {
+        setActiveTab('media');
+        setError("L'image de la recette est manquante. Veuillez ajouter une URL d'image valide.");
+        return;
+    }
+
+    if (cleanSources.length === 0) {
+        setActiveTab('media');
+        setError("La source est manquante. Veuillez ajouter au moins une source ou un crédit.");
         return;
     }
 
@@ -257,49 +294,59 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
   const categoryOptions = [{ value: '', label: 'Sélectionner une catégorie' }, ...categories.map(c => ({ value: c._id, label: c.name }))];
 
   const tabs = [
-      { id: 'info', label: 'Informations' },
-      { id: 'details', label: 'Ingrédients & Préparation' },
-      { id: 'media', label: 'Média & Sources' },
+      { id: 'info', label: 'Informations', mobileLabel: 'Infos' },
+      { id: 'details', label: 'Ingrédients & Préparation', mobileLabel: 'Recette' },
+      { id: 'media', label: 'Média & Sources', mobileLabel: 'Média' },
   ];
 
   const futureSchedule = isFutureSchedule();
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex items-center justify-center p-4" aria-modal="true" role="dialog">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[90vh] transform transition-all">
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex items-center justify-center p-2 sm:p-4" aria-modal="true" role="dialog">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[95vh] sm:max-h-[90vh] transform transition-all">
             <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
             
-            <div className="p-6 border-b border-border-color flex justify-between items-center bg-white rounded-t-xl z-10">
-                 <h3 className="text-2xl font-bold text-text-primary">
+            <div className="p-4 sm:p-6 border-b border-border-color flex justify-between items-center bg-white rounded-t-xl z-10">
+                 <h3 className="text-lg sm:text-2xl font-bold text-text-primary truncate pr-2">
                     {recipe ? "Modifier la recette" : "Ajouter une recette"}
                 </h3>
-                <button type="button" onClick={onClose} className="p-2 rounded-full text-text-secondary hover:bg-gray-100 transition-colors">
+                <button type="button" onClick={onClose} className="p-2 rounded-full text-text-secondary hover:bg-gray-100 transition-colors flex-shrink-0">
                     <XIcon className="h-6 w-6" />
                 </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-border-color px-8 bg-gray-50/50">
+            <div className="flex border-b border-border-color bg-gray-50/50 overflow-x-auto [&::-webkit-scrollbar]:hidden">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
                         type="button"
                         onClick={() => setActiveTab(tab.id as any)}
-                        className={`py-4 px-6 font-medium text-sm border-b-2 transition-colors ${activeTab === tab.id ? 'border-premier text-premier' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
+                        className={`flex-1 flex items-center justify-center min-w-fit whitespace-nowrap py-3 px-3 sm:px-6 font-medium text-sm border-b-2 transition-colors ${activeTab === tab.id ? 'border-premier text-premier' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
                     >
-                        {tab.label}
+                        <span className="sm:hidden">{tab.mobileLabel}</span>
+                        <span className="hidden sm:inline">{tab.label}</span>
                     </button>
                 ))}
             </div>
 
-            <div className="p-8 overflow-y-auto flex-1 custom-scrollbar bg-white">
+            <div className="p-3 sm:p-8 overflow-y-auto flex-1 custom-scrollbar bg-white">
                 {/* General Info Tab */}
                 {activeTab === 'info' && (
-                    <div className="space-y-8 animate-fade-in-up">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-6 sm:space-y-8 animate-fade-in-up">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                             <div>
                                 <label htmlFor="title" className="block text-sm font-medium text-text-secondary mb-2">Titre de la recette</label>
-                                <input required type="text" id="title" value={title} onChange={(e) => setTitle(e.target.value)} className={inputBaseClass} />
+                                <input 
+                                    required 
+                                    type="text" 
+                                    id="title" 
+                                    value={title} 
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    onInvalid={handleInvalid}
+                                    onInput={handleInput} 
+                                    className={inputBaseClass} 
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-text-secondary mb-2">Catégorie</label>
@@ -309,11 +356,20 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                         
                         <div>
                             <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-2">Description courte / Introduction</label>
-                            <textarea required rows={4} id="description" value={description} onChange={(e) => setDescription(e.target.value)} className={inputBaseClass} />
+                            <textarea 
+                                required 
+                                rows={4} 
+                                id="description" 
+                                value={description} 
+                                onChange={(e) => setDescription(e.target.value)}
+                                onInvalid={handleInvalid}
+                                onInput={handleInput} 
+                                className={inputBaseClass} 
+                            />
                         </div>
 
                         {/* Scheduling & Status */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                             <div>
                                 <label className="block text-sm font-medium text-text-secondary mb-2">Statut</label>
                                 <label className="flex items-center cursor-pointer w-fit select-none">
@@ -370,10 +426,22 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
                              <div>
                                 <label htmlFor="rating" className="block text-sm font-medium text-text-secondary mb-2">Note (0 - 5)</label>
-                                <input type="number" step="0.1" min="0" max="5" id="rating" value={rating} onChange={(e) => setRating(e.target.value)} className={inputBaseClass} />
+                                <input 
+                                    required 
+                                    type="number" 
+                                    step="0.1" 
+                                    min="0" 
+                                    max="5" 
+                                    id="rating" 
+                                    value={rating} 
+                                    onChange={(e) => setRating(e.target.value)} 
+                                    onInvalid={handleInvalid}
+                                    onInput={handleInput}
+                                    className={inputBaseClass} 
+                                />
                             </div>
                              <div>
                                 <label className="block text-sm font-medium text-text-secondary mb-2">Ville / Région (Optionnel)</label>
@@ -394,57 +462,85 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
 
                 {/* Details Tab */}
                 {activeTab === 'details' && (
-                    <div className="space-y-10 animate-fade-in-up">
+                    <div className="space-y-8 sm:space-y-10 animate-fade-in-up">
                         {/* Ingredients */}
                         <div>
-                            <div className="flex justify-between items-center mb-4">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
                                 <label className="block text-lg font-semibold text-text-primary">Ingrédients</label>
-                                <button type="button" onClick={addIngredient} className="text-white bg-premier hover:bg-premier-dark px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-colors">
+                                <button type="button" onClick={addIngredient} className="text-white bg-premier hover:bg-premier-dark px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-colors w-full sm:w-auto justify-center">
                                     <PlusIcon className="h-4 w-4" /> Ajouter un ingrédient
                                 </button>
                             </div>
                             <div className="space-y-3">
                                 {ingredients.map((item, idx) => (
-                                    <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center bg-gray-50 p-4 rounded-xl border border-border-color hover:border-gray-300 transition-colors">
-                                        <div className="sm:col-span-6 flex items-center gap-3">
-                                            <span className="text-sm font-bold text-text-primary bg-white w-8 h-8 flex items-center justify-center rounded-full shadow-sm border border-gray-200 shrink-0">{idx + 1}</span>
+                                    <div key={idx} className="bg-white sm:bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-200 sm:border-transparent mb-3 shadow-sm sm:shadow-none">
+                                        {/* Mobile Header */}
+                                        <div className="flex justify-between items-center mb-2 sm:hidden pb-2 border-b border-gray-100">
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Ingrédient {idx + 1}</span>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => removeIngredient(idx)} 
+                                                className="text-red-500 p-1.5 rounded-md hover:bg-red-50"
+                                            >
+                                                <TrashIcon className="h-4 w-4" />
+                                            </button>
+                                        </div>
+
+                                        <div className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:gap-4 items-start sm:items-center">
                                             
-                                            <div className="flex-grow relative z-20" style={{ zIndex: ingredients.length - idx }}> 
+                                            {/* Desktop Index */}
+                                            <div className="hidden sm:flex sm:col-span-1 justify-center">
+                                                <span className="text-sm font-bold text-gray-500 bg-white w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 shadow-sm">{idx + 1}</span>
+                                            </div>
+
+                                            {/* Name Section */}
+                                            <div className="w-full sm:col-span-6 relative z-20" style={{ zIndex: ingredients.length - idx }}> 
                                                 <CreatableSelect
                                                     options={existingIngredients}
                                                     value={item.name}
                                                     onChange={(val) => handleIngredientChange(idx, 'name', val)}
-                                                    placeholder="Nom de l'ingrédient (ex: Farine)"
+                                                    placeholder="Nom (ex: Farine)"
+                                                    required
                                                 />
                                             </div>
-                                        </div>
-                                        <div className="sm:col-span-2">
-                                            <input 
-                                                type="number" 
-                                                step="0.1"
-                                                value={item.quantity} 
-                                                onChange={(e) => handleIngredientChange(idx, 'quantity', parseFloat(e.target.value) || 0)} 
-                                                className={inputBaseClass} 
-                                                placeholder="Quantité" 
-                                            />
-                                        </div>
-                                        <div className="sm:col-span-3">
-                                            <select
-                                                value={item.unit}
-                                                onChange={(e) => handleIngredientChange(idx, 'unit', e.target.value)}
-                                                className={`${inputBaseClass} appearance-none cursor-pointer`}
-                                                style={{ backgroundImage: 'none' }}
-                                            >
-                                                {UNIT_OPTIONS.map(u => (
-                                                    <option key={u} value={u}>{u}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        
-                                        <div className="sm:col-span-1 flex justify-end">
-                                            <button type="button" onClick={() => removeIngredient(idx)} className="text-text-secondary hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors">
-                                                <TrashIcon className="h-5 w-5" />
-                                            </button>
+
+                                            {/* Quantity Section */}
+                                            <div className="w-full sm:col-span-4 flex gap-3">
+                                                 <div className="w-1/2">
+                                                    <input 
+                                                        type="number" 
+                                                        step="0.1"
+                                                        value={item.quantity} 
+                                                        onChange={(e) => handleIngredientChange(idx, 'quantity', parseFloat(e.target.value) || 0)} 
+                                                        className={inputBaseClass} 
+                                                        placeholder="Qte" 
+                                                        onInvalid={handleInvalid}
+                                                        onInput={handleInput}
+                                                        required
+                                                    />
+                                                 </div>
+                                                 <div className="w-1/2 relative">
+                                                    <select
+                                                        value={item.unit}
+                                                        onChange={(e) => handleIngredientChange(idx, 'unit', e.target.value)}
+                                                        className={`${inputBaseClass} appearance-none cursor-pointer pr-8`}
+                                                    >
+                                                        {UNIT_OPTIONS.map(u => (
+                                                            <option key={u} value={u}>{u}</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Desktop Delete */}
+                                            <div className="hidden sm:flex sm:col-span-1 justify-end">
+                                                <button type="button" onClick={() => removeIngredient(idx)} className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors">
+                                                    <TrashIcon className="h-5 w-5" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -455,20 +551,54 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
 
                         {/* Instructions */}
                         <div>
-                             <div className="flex justify-between items-center mb-4">
+                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
                                 <label className="block text-lg font-semibold text-text-primary">Instructions de préparation</label>
-                                <button type="button" onClick={addInstruction} className="text-white bg-premier hover:bg-premier-dark px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-colors">
+                                <button type="button" onClick={addInstruction} className="text-white bg-premier hover:bg-premier-dark px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-colors w-full sm:w-auto justify-center">
                                     <PlusIcon className="h-4 w-4" /> Ajouter une étape
                                 </button>
                             </div>
                             <div className="space-y-4">
                                 {instructions.map((item, idx) => (
-                                    <div key={idx} className="flex gap-4 items-start bg-gray-50 p-4 rounded-xl border border-border-color">
-                                        <span className="text-sm font-bold text-premier bg-purple-50 w-8 h-8 flex items-center justify-center rounded-full border border-purple-100 shrink-0 mt-1">{idx + 1}</span>
-                                        <textarea rows={2} value={item} onChange={(e) => handleInstructionChange(idx, e.target.value)} className={`${inputBaseClass} bg-white`} placeholder={`Étape ${idx + 1} : Décrivez l'action à réaliser...`} />
-                                        <button type="button" onClick={() => removeInstruction(idx)} className="text-text-secondary hover:text-red-500 p-2 mt-1 rounded-full hover:bg-red-50 transition-colors">
-                                            <TrashIcon className="h-5 w-5" />
-                                        </button>
+                                    <div key={idx} className="bg-white sm:bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-200 sm:border-transparent mb-3 shadow-sm sm:shadow-none">
+                                        {/* Mobile Header */}
+                                        <div className="flex justify-between items-center mb-2 sm:hidden pb-2 border-b border-gray-100">
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Étape {idx + 1}</span>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => removeInstruction(idx)} 
+                                                className="text-red-500 p-1.5 rounded-md hover:bg-red-50"
+                                            >
+                                                <TrashIcon className="h-4 w-4" />
+                                            </button>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-start">
+                                            <div className="hidden sm:block pt-2">
+                                                <span className="text-sm font-bold text-gray-500 w-8 text-center block">{idx + 1}</span>
+                                            </div>
+                                            
+                                            <div className="flex-grow w-full">
+                                                <textarea 
+                                                    rows={3} 
+                                                    value={item} 
+                                                    onChange={(e) => handleInstructionChange(idx, e.target.value)} 
+                                                    className={`${inputBaseClass} bg-white w-full`} 
+                                                    placeholder={`Décrivez l'action à réaliser...`} 
+                                                    required
+                                                    onInvalid={handleInvalid}
+                                                    onInput={handleInput}
+                                                />
+                                            </div>
+
+                                            {/* Desktop Delete */}
+                                            <button 
+                                                type="button" 
+                                                onClick={() => removeInstruction(idx)} 
+                                                className="hidden sm:block text-gray-400 hover:text-red-500 mt-2 p-2 rounded-full hover:bg-red-50 transition-colors self-start"
+                                            >
+                                                <TrashIcon className="h-5 w-5" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -482,8 +612,18 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                              <div className="space-y-4">
                                 <label htmlFor="imageUrl" className="block text-sm font-medium text-text-secondary">Image URL</label>
-                                <input required type="text" id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className={inputBaseClass} placeholder="https://example.com/recipe.jpg" />
-                                <div className="border-2 border-dashed border-border-color rounded-xl h-64 flex items-center justify-center bg-gray-50 overflow-hidden relative">
+                                <input 
+                                    required 
+                                    type="text" 
+                                    id="imageUrl" 
+                                    value={imageUrl} 
+                                    onChange={(e) => setImageUrl(e.target.value)}
+                                    onInvalid={handleInvalid}
+                                    onInput={handleInput} 
+                                    className={inputBaseClass} 
+                                    placeholder="https://example.com/recipe.jpg" 
+                                />
+                                <div className="border-2 border-dashed border-border-color rounded-xl h-48 sm:h-64 flex items-center justify-center bg-gray-50 overflow-hidden relative">
                                     {imageUrl ? (
                                         <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement?.classList.add('bg-gray-100'); }} />
                                     ) : (
@@ -513,6 +653,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                                                         value={item}
                                                         onChange={(val) => handleSourceChange(idx, val.toUpperCase())}
                                                         placeholder="ex: CHEF UNTEL"
+                                                        required
                                                     />
                                                  </div>
                                                  <button type="button" onClick={() => removeSource(idx)} className="text-text-secondary hover:text-red-500 p-2">
@@ -530,11 +671,11 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                 {error && <p className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-lg mt-6 font-medium border border-red-100">{error}</p>}
             </div>
 
-            <div className="p-6 border-t border-border-color bg-gray-50 rounded-b-xl flex flex-row-reverse items-center gap-3 z-10">
+            <div className="p-4 sm:p-6 border-t border-border-color bg-gray-50 rounded-b-xl flex flex-col sm:flex-row-reverse items-center gap-3 z-10">
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className="inline-flex justify-center rounded-lg shadow-sm px-6 py-3 bg-premier text-base font-semibold text-white hover:bg-premier-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier sm:text-sm disabled:opacity-50 transition-all"
+                    className="w-full sm:w-auto inline-flex justify-center rounded-lg shadow-sm px-6 py-3 bg-premier text-base font-semibold text-white hover:bg-premier-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier sm:text-sm disabled:opacity-50 transition-all"
                 >
                     {isLoading ? 'Enregistrement...' : 'Enregistrer la recette'}
                 </button>
@@ -542,7 +683,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                     type="button"
                     onClick={onClose}
                     disabled={isLoading}
-                    className="inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-6 py-3 bg-white text-base font-semibold text-text-primary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier sm:text-sm disabled:opacity-50 transition-all"
+                    className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-6 py-3 bg-white text-base font-semibold text-text-primary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier sm:text-sm disabled:opacity-50 transition-all"
                 >
                     Annuler
                 </button>

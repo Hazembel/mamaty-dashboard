@@ -11,6 +11,7 @@ import AdvicesPage from './AdvicesPage';
 import ArticlesPage from './ArticlesPage';
 import RecipesPage from './RecipesPage';
 import SettingsPage from './SettingsPage';
+import InfosPage from './InfosPage';
 import EditUserModal from './EditUserModal';
 import { User } from '../types';
 import { getProfile } from '../services/adminService';
@@ -124,6 +125,7 @@ const PanelPage: React.FC<PanelPageProps> = ({ token, onLogout }) => {
                     {currentPage === 'articles' && <ArticlesPage token={token} onLogout={onLogout} />}
                     {currentPage === 'recipes' && <RecipesPage token={token} onLogout={onLogout} />}
                     {currentPage === 'settings' && <SettingsPage token={token} onLogout={onLogout} />}
+                    {currentPage === 'infos' && <InfosPage token={token} onLogout={onLogout} />}
                 </main>
             </div>
 

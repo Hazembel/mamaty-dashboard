@@ -61,6 +61,14 @@ const EditCategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSa
     });
   };
 
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity("Veuillez remplir ce champ.");
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity('');
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -119,7 +127,9 @@ const EditCategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSa
                             type="text" 
                             id="name" 
                             value={name} 
-                            onChange={(e) => setName(e.target.value)} 
+                            onChange={(e) => setName(e.target.value)}
+                            onInvalid={handleInvalid}
+                            onInput={handleInput} 
                             className="w-full bg-background rounded-lg py-2.5 px-4 text-text-primary border border-transparent focus:border-premier focus:outline-none focus:ring-2 focus:ring-premier focus:bg-white transition-colors" 
                         />
                     </div>

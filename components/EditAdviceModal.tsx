@@ -89,6 +89,14 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
   const addSource = () => setSources(prev => [...prev, '']);
   const removeSource = (index: number) => setSources(prev => prev.filter((_, i) => i !== index));
 
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity("Veuillez remplir ce champ.");
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity('');
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -185,7 +193,16 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="title" className="block text-sm font-medium text-text-secondary mb-1">Titre</label>
-                            <input required type="text" id="title" value={title} onChange={(e) => setTitle(e.target.value)} className={inputBaseClass} />
+                            <input 
+                                required 
+                                type="text" 
+                                id="title" 
+                                value={title} 
+                                onChange={(e) => setTitle(e.target.value)}
+                                onInvalid={handleInvalid}
+                                onInput={handleInput}
+                                className={inputBaseClass} 
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-text-secondary mb-1">Catégorie</label>

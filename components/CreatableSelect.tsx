@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDownIcon } from './icons';
 
@@ -53,6 +54,14 @@ const CreatableSelect: React.FC<CreatableSelectProps> = ({ options, value, onCha
     }
   };
 
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity("Veuillez remplir ce champ.");
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity('');
+  };
+
   const showAddNew = searchTerm && !options.some(opt => opt.toLowerCase() === searchTerm.toLowerCase());
   const inputBaseClass = "w-full bg-background rounded-lg py-2.5 px-4 text-text-primary placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-premier focus:bg-white transition-colors";
 
@@ -69,6 +78,8 @@ const CreatableSelect: React.FC<CreatableSelectProps> = ({ options, value, onCha
           placeholder={placeholder}
           className={inputBaseClass}
           required={required && !value}
+          onInvalid={handleInvalid}
+          onInput={handleInput}
         />
         <button
           type="button"

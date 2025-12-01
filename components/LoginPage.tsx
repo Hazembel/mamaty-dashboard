@@ -1,3 +1,4 @@
+
 import React, { useState, FormEvent } from 'react';
 import { loginAdmin } from '../services/adminService';
 import { UserIcon, LockIcon } from './icons';
@@ -31,6 +32,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement>, message: string) => {
+    const target = e.target as HTMLInputElement;
+    target.setCustomValidity(message);
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+    const target = e.target as HTMLInputElement;
+    target.setCustomValidity('');
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 transition-colors duration-300">
       <div className="w-full max-w-md">
@@ -50,6 +61,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onInvalid={(e) => handleInvalid(e, "Veuillez saisir une adresse e-mail valide.")}
+                onInput={handleInput}
                 placeholder="Adresse e-mail"
                 className="w-full pl-10 pr-4 py-3 border border-border-color rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-premier transition-shadow"
                 required
@@ -65,6 +78,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onInvalid={(e) => handleInvalid(e, "Veuillez saisir votre mot de passe.")}
+                onInput={handleInput}
                 placeholder="Mot de passe"
                 className="w-full pl-10 pr-4 py-3 border border-border-color rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-premier transition-shadow"
                 required

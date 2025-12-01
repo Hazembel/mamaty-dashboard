@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, FormEvent } from 'react';
 import { Doctor } from '../types';
 import { XIcon } from './icons';
@@ -98,6 +99,14 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
     setFormData(prev => ({...prev, phone: formatted}));
   };
 
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement>, message: string) => {
+    (e.target as HTMLInputElement).setCustomValidity(message);
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity('');
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -173,7 +182,17 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-1">Nom complet</label>
-                  <input required type="text" name="name" id="name" value={formData.name} onChange={handleChange} className={inputBaseClass} />
+                  <input 
+                    required 
+                    type="text" 
+                    name="name" 
+                    id="name" 
+                    value={formData.name} 
+                    onChange={handleChange} 
+                    onInvalid={(e) => handleInvalid(e, "Veuillez remplir ce champ.")}
+                    onInput={handleInput}
+                    className={inputBaseClass} 
+                  />
                 </div>
                 <div>
                   <label htmlFor="specialty" className="block text-sm font-medium text-text-secondary mb-1">Spécialité</label>
@@ -197,7 +216,20 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
                 </div>
                  <div>
                   <label htmlFor="rating" className="block text-sm font-medium text-text-secondary mb-1">Note (0-5)</label>
-                  <input required type="number" step="0.1" min="0" max="5" name="rating" id="rating" value={formData.rating} onChange={handleChange} className={inputBaseClass} />
+                  <input 
+                    required 
+                    type="number" 
+                    step="0.1" 
+                    min="0" 
+                    max="5" 
+                    name="rating" 
+                    id="rating" 
+                    value={formData.rating} 
+                    onChange={handleChange} 
+                    onInvalid={(e) => handleInvalid(e, "Veuillez remplir ce champ.")}
+                    onInput={handleInput}
+                    className={inputBaseClass} 
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">

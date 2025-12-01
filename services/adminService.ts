@@ -6,7 +6,7 @@ const ADMIN_URL = `${API_BASE_URL}/admin`;
 
 export const loginAdmin = async (email: string, password: string): Promise<string> => {
   const loginUrl = `${ADMIN_URL}/login`;
-  //console.log(`[LOGIN ATTEMPT] Tentative de connexion à: ${loginUrl}`);
+  console.log(`[LOGIN ATTEMPT] Tentative de connexion à: ${loginUrl}`);
 
   try {
     const response = await fetch(loginUrl, {
@@ -17,12 +17,12 @@ export const loginAdmin = async (email: string, password: string): Promise<strin
       body: JSON.stringify({ email, password }),
     });
 
-    //console.log('[LOGIN RESPONSE] Réponse brute du serveur:', response);
-    //console.log(`[LOGIN RESPONSE] Statut: ${response.status} ${response.statusText}`);
+    console.log('[LOGIN RESPONSE] Réponse brute du serveur:', response);
+    console.log(`[LOGIN RESPONSE] Statut: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       const errorBody = await response.text();
-      //console.error('[LOGIN ERROR] Corps de la réponse brute (erreur):', errorBody);
+      console.error('[LOGIN ERROR] Corps de la réponse brute (erreur):', errorBody);
 
       let errorData;
       try {
@@ -32,19 +32,30 @@ export const loginAdmin = async (email: string, password: string): Promise<strin
       }
       
       let message = errorData.message || 'Échec de la connexion';
+      const lowerMsg = message.toLowerCase();
       
-      // Translate common login errors
-      if (message === 'Invalid password') {
+      // Translate common login errors from English to French
+      if (lowerMsg.includes('invalid password') || lowerMsg.includes('wrong password') || lowerMsg.includes('password is incorrect')) {
           message = 'Mot de passe incorrect.';
-      } else if (message.includes('User not found')) {
-          message = 'Utilisateur introuvable.';
+      } else if (lowerMsg.includes('user not found') || lowerMsg.includes('admin not found') || lowerMsg.includes('no user found') || lowerMsg.includes('account not found') || lowerMsg.includes("user doesn't exist")) {
+          message = 'Compte administrateur introuvable.';
+      } else if (lowerMsg.includes('invalid email')) {
+          message = 'Adresse email invalide.';
+      } else if (lowerMsg.includes('invalid credentials') || lowerMsg.includes('bad credentials')) {
+          message = 'Identifiants incorrects.';
+      } else if (lowerMsg.includes('unauthorized') || lowerMsg.includes('access denied') || lowerMsg.includes('forbidden')) {
+          message = 'Accès refusé.';
+      } else if (lowerMsg.includes('server error') || lowerMsg.includes('internal server error')) {
+          message = 'Erreur interne du serveur.';
+      } else if (lowerMsg.includes('please fill out') || lowerMsg.includes('required')) {
+          message = 'Veuillez remplir tous les champs obligatoires.';
       }
 
       throw new Error(message);
     }
 
     const data = await response.json();
-   // console.log('[LOGIN SUCCESS] Données de la réponse analysées:', data);
+    console.log('[LOGIN SUCCESS] Données de la réponse analysées:', data);
 
     if (!data.token) {
       console.error('[LOGIN ERROR] Token non trouvé dans la réponse JSON.');
@@ -54,11 +65,11 @@ export const loginAdmin = async (email: string, password: string): Promise<strin
     // Cache user if provided in login response (check for .user, .admin, .data, or flat object)
     const userObj = data.user || data.admin || data.data;
     if (userObj) {
-   //     console.log('[LOGIN SUCCESS] Utilisateur trouvé, mise en cache.');
+        console.log('[LOGIN SUCCESS] Utilisateur trouvé, mise en cache.');
         localStorage.setItem('currentUser', JSON.stringify(userObj));
     }
 
-  //  console.log('[LOGIN SUCCESS] Connexion réussie, token reçu.');
+    console.log('[LOGIN SUCCESS] Connexion réussie, token reçu.');
     return data.token;
 
   } catch (error) {

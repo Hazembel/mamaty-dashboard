@@ -38,24 +38,14 @@ const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby
         if (baby) {
           let formattedBirthday = '';
           if (baby.birthday && !baby.birthday.startsWith('0000-00-00')) {
-            try {
-              let date: Date;
-              const dateString = baby.birthday;
-              if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
-                  const parts = dateString.split('/');
-                  date = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-              } else {
-                  date = new Date(dateString);
-              }
-
-              if (!isNaN(date.getTime())) {
-                // Format to YYYY-MM-DD using local components
-                const y = date.getFullYear();
-                const m = String(date.getMonth() + 1).padStart(2, '0');
-                const d = String(date.getDate()).padStart(2, '0');
-                formattedBirthday = `${y}-${m}-${d}`;
-              }
-            } catch (e) { console.error("Could not parse birthday:", baby.birthday); }
+            const dateString = baby.birthday;
+            // Strict parsing to avoid timezone shifts. 
+            // If ISO string (e.g. 2000-01-19T00:00:00.000Z), just take the date part.
+            if (dateString.includes('T')) {
+                formattedBirthday = dateString.split('T')[0];
+            } else {
+                formattedBirthday = dateString;
+            }
           }
 
           setFormData({
@@ -75,6 +65,14 @@ const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement>, message: string) => {
+    (e.target as HTMLInputElement).setCustomValidity(message);
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity('');
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -123,7 +121,17 @@ const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-1">Prénom</label>
-                  <input required type="text" name="name" id="name" value={formData.name} onChange={handleChange} className={inputBaseClass} />
+                  <input 
+                    required 
+                    type="text" 
+                    name="name" 
+                    id="name" 
+                    value={formData.name} 
+                    onChange={handleChange} 
+                    onInvalid={(e) => handleInvalid(e, "Veuillez remplir ce champ.")}
+                    onInput={handleInput}
+                    className={inputBaseClass} 
+                  />
                 </div>
                  <div>
                     <label htmlFor="gender" className="block text-sm font-medium text-text-secondary mb-1">Genre</label>

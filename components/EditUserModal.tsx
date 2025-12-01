@@ -65,27 +65,13 @@ const EditUserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, user
         if (isEditMode && user) {
           let formattedBirthday = '';
           if (user.birthday && !user.birthday.startsWith('0000-00-00')) {
-            try {
-              let date: Date;
-              const dateString = user.birthday;
-              // Handle DD/MM/YYYY format
-              if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
-                  const parts = dateString.split('/');
-                  date = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-              } else {
-                  // Fallback for ISO strings
-                  date = new Date(dateString);
-              }
-
-              if (!isNaN(date.getTime())) {
-                // Format to YYYY-MM-DD for the date input element using local time components
-                const y = date.getFullYear();
-                const m = String(date.getMonth() + 1).padStart(2, '0');
-                const d = String(date.getDate()).padStart(2, '0');
-                formattedBirthday = `${y}-${m}-${d}`;
-              }
-            } catch (e) {
-              console.error("Could not parse birthday:", user.birthday);
+            const dateString = user.birthday;
+            // Strict parsing to avoid timezone shifts. 
+            // If ISO string (e.g. 2000-01-19T00:00:00.000Z), just take the date part.
+            if (dateString.includes('T')) {
+                formattedBirthday = dateString.split('T')[0];
+            } else {
+                formattedBirthday = dateString;
             }
           }
 
@@ -117,6 +103,16 @@ const EditUserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, user
     } else {
         setFormData(prev => ({ ...prev, [name]: value }));
     }
+  };
+
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement>, message: string) => {
+    const target = e.target as HTMLInputElement;
+    target.setCustomValidity(message);
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+    const target = e.target as HTMLInputElement;
+    target.setCustomValidity('');
   };
 
   const availableAvatars = useMemo(() => {
@@ -223,18 +219,48 @@ const EditUserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, user
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-1">Prénom</label>
-                  <input required type="text" name="name" id="name" value={formData.name} onChange={handleChange} className={inputBaseClass} />
+                  <input 
+                    required 
+                    type="text" 
+                    name="name" 
+                    id="name" 
+                    value={formData.name} 
+                    onChange={handleChange} 
+                    onInvalid={(e) => handleInvalid(e, "Veuillez saisir un prénom.")}
+                    onInput={handleInput}
+                    className={inputBaseClass} 
+                  />
                 </div>
                 <div>
                   <label htmlFor="lastname" className="block text-sm font-medium text-text-secondary mb-1">Nom</label>
-                  <input required type="text" name="lastname" id="lastname" value={formData.lastname} onChange={handleChange} className={inputBaseClass} />
+                  <input 
+                    required 
+                    type="text" 
+                    name="lastname" 
+                    id="lastname" 
+                    value={formData.lastname} 
+                    onChange={handleChange} 
+                    onInvalid={(e) => handleInvalid(e, "Veuillez saisir un nom.")}
+                    onInput={handleInput}
+                    className={inputBaseClass} 
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
                  <div>
                   <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-1">Email</label>
-                  <input required type="email" name="email" id="email" value={formData.email} onChange={handleChange} className={inputBaseClass} />
+                  <input 
+                    required 
+                    type="email" 
+                    name="email" 
+                    id="email" 
+                    value={formData.email} 
+                    onChange={handleChange}
+                    onInvalid={(e) => handleInvalid(e, "Veuillez saisir une adresse e-mail valide.")}
+                    onInput={handleInput}
+                    className={inputBaseClass} 
+                  />
                 </div>
                  <div>
                   <label htmlFor="gender" className="block text-sm font-medium text-text-secondary mb-1">Genre</label>
