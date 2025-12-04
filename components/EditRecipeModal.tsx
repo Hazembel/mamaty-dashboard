@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { Recipe, Category, Ingredient } from '../types';
-import { XIcon, PlusIcon, TrashIcon, ClockIcon, CalendarIcon } from './icons';
+import { XIcon, PlusIcon, TrashIcon, ClockIcon, CalendarIcon, UploadIcon, LoadingSpinnerIcon } from './icons';
 import Dropdown from './Dropdown';
 import CreatableSelect from './CreatableSelect';
 import { tunisianCities } from '../lib/tunisianCities';
 import DatePicker from './DatePicker';
+import { uploadImage } from '../services/adminService';
 
 interface RecipeModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface RecipeModalProps {
   isLoading?: boolean;
   existingIngredients?: string[];
   existingSources?: string[];
+  token: string;
 }
 
 const cityOptions = [
@@ -27,7 +29,7 @@ const UNIT_OPTIONS = [
   'g', 'kg', 'ml', 'cl', 'l', 'c.à.s', 'c.à.c', 'pincée', 'pièce', 'tranche', 'tasse', 'verre', 'bol', 'botte', 'gousse', 'brin'
 ];
 
-const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, recipe, categories, isLoading, existingIngredients = [], existingSources = [] }) => {
+const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, recipe, categories, isLoading, existingIngredients = [], existingSources = [], token }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -52,11 +54,14 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
 
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'info' | 'details' | 'media'>('info');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setError('');
       setActiveTab('info');
+      setIsUploading(false);
       if (recipe) {
         setTitle(recipe.title);
         setDescription(recipe.description || '');
@@ -184,6 +189,31 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
       });
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          setError("L'image est trop volumineuse (max 5MB).");
+          return;
+      }
+      
+      setIsUploading(true);
+      setError('');
+
+      try {
+          // Upload to backend
+          const uploadedUrl = await uploadImage(token, file);
+          setImageUrl(uploadedUrl);
+      } catch (err) {
+          setError(err instanceof Error ? err.message : "Échec du téléchargement de l'image.");
+          // Reset file input so user can try again
+          if (fileInputRef.current) fileInputRef.current.value = '';
+      } finally {
+          setIsUploading(false);
+      }
+    }
+  };
+
   const isFutureSchedule = () => {
     if (!scheduledDate) return false;
     const time = scheduledTime || '00:00';
@@ -202,6 +232,8 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (isUploading) return;
 
     // --- INFO TAB VALIDATION ---
     if (!title.trim()) {
@@ -611,26 +643,85 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                      <div className="space-y-8 animate-fade-in-up">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                              <div className="space-y-4">
-                                <label htmlFor="imageUrl" className="block text-sm font-medium text-text-secondary">Image URL</label>
-                                <input 
-                                    required 
-                                    type="text" 
-                                    id="imageUrl" 
-                                    value={imageUrl} 
-                                    onChange={(e) => setImageUrl(e.target.value)}
-                                    onInvalid={handleInvalid}
-                                    onInput={handleInput} 
-                                    className={inputBaseClass} 
-                                    placeholder="https://example.com/recipe.jpg" 
-                                />
-                                <div className="border-2 border-dashed border-border-color rounded-xl h-48 sm:h-64 flex items-center justify-center bg-gray-50 overflow-hidden relative">
-                                    {imageUrl ? (
-                                        <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement?.classList.add('bg-gray-100'); }} />
-                                    ) : (
-                                        <span className="text-text-secondary text-sm">Aperçu de l'image</span>
+                                <label className="block text-sm font-medium text-text-secondary">Image de la recette</label>
+                                
+                                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                                    {/* Preview */}
+                                    {imageUrl && (
+                                        <div className="relative w-32 h-32 flex-shrink-0 mx-auto sm:mx-0 group">
+                                            <img 
+                                                src={imageUrl.startsWith('http') ? imageUrl : `https://${imageUrl}`} 
+                                                alt="Aperçu" 
+                                                className="w-full h-full object-cover rounded-xl border border-border-color shadow-sm bg-gray-50"
+                                                onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/150?text=Erreur'; }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setImageUrl('');
+                                                    if (fileInputRef.current) fileInputRef.current.value = '';
+                                                }}
+                                                className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors border border-white shadow-sm"
+                                            >
+                                                <XIcon className="h-4 w-4" />
+                                            </button>
+                                        </div>
                                     )}
+
+                                    {/* Controls */}
+                                    <div className="flex-1 w-full space-y-3">
+                                         <div className={`flex items-center w-full bg-background rounded-lg border border-border-color focus-within:ring-2 focus-within:ring-premier focus-within:border-premier overflow-hidden transition-all ${isUploading ? 'opacity-60 bg-gray-50' : ''}`}>
+                                            <span className="pl-3 pr-2 text-text-secondary text-sm border-r border-border-color bg-gray-50 h-full flex items-center">https://</span>
+                                            <input 
+                                                type="text" 
+                                                value={imageUrl.replace(/^https?:\/\//, '')} 
+                                                onChange={(e) => setImageUrl(e.target.value)} 
+                                                onInvalid={handleInvalid}
+                                                onInput={handleInput} 
+                                                className="w-full bg-transparent py-2.5 px-3 text-text-primary placeholder:text-gray-400 focus:outline-none text-sm" 
+                                                placeholder="www.exemple.com/recette.jpg" 
+                                                disabled={isUploading}
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-px bg-border-color flex-1"></div>
+                                            <span className="text-xs text-text-secondary uppercase font-medium">OU</span>
+                                            <div className="h-px bg-border-color flex-1"></div>
+                                        </div>
+
+                                        <div>
+                                            <input 
+                                                type="file" 
+                                                ref={fileInputRef} 
+                                                className="hidden" 
+                                                accept="image/*" 
+                                                onChange={handleFileChange}
+                                                disabled={isUploading}
+                                            />
+                                            <button 
+                                                type="button" 
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={isUploading}
+                                                className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-gray-300 rounded-lg text-sm text-text-secondary hover:text-premier hover:border-premier hover:bg-premier/5 transition-all bg-gray-50/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {isUploading ? (
+                                                    <>
+                                                        <LoadingSpinnerIcon className="h-5 w-5 text-premier" />
+                                                        <span>Téléchargement...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <UploadIcon className="h-5 w-5" />
+                                                        <span>Choisir une image depuis l'appareil</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
                             <div className="space-y-8">
                                 <div>
                                     <label htmlFor="videoUrl" className="block text-sm font-medium text-text-secondary mb-2">Vidéo URL (Optionnel)</label>
@@ -674,15 +765,15 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
             <div className="p-4 sm:p-6 border-t border-border-color bg-gray-50 rounded-b-xl flex flex-col sm:flex-row-reverse items-center gap-3 z-10">
                 <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || isUploading}
                     className="w-full sm:w-auto inline-flex justify-center rounded-lg shadow-sm px-6 py-3 bg-premier text-base font-semibold text-white hover:bg-premier-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier sm:text-sm disabled:opacity-50 transition-all"
                 >
-                    {isLoading ? 'Enregistrement...' : 'Enregistrer la recette'}
+                    {isLoading || isUploading ? 'Enregistrement...' : 'Enregistrer la recette'}
                 </button>
                 <button
                     type="button"
                     onClick={onClose}
-                    disabled={isLoading}
+                    disabled={isLoading || isUploading}
                     className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-6 py-3 bg-white text-base font-semibold text-text-primary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier sm:text-sm disabled:opacity-50 transition-all"
                 >
                     Annuler

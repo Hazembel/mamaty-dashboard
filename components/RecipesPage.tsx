@@ -357,6 +357,7 @@ const RecipesPage: React.FC<RecipesPageProps> = ({ token, onLogout }) => {
         isLoading={isSubmitting}
         existingIngredients={allIngredients}
         existingSources={allSources}
+        token={token}
       />
       
       <ConfirmationModal

@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { Article, Category } from '../types';
-import { XIcon, PlusIcon, TrashIcon, ClockIcon, CalendarIcon } from './icons';
+import { XIcon, PlusIcon, TrashIcon, ClockIcon, CalendarIcon, UploadIcon, LoadingSpinnerIcon } from './icons';
 import Dropdown from './Dropdown';
 import CreatableSelect from './CreatableSelect';
 import DatePicker from './DatePicker';
+import { uploadImage } from '../services/adminService';
 
 interface ArticleModalProps {
   isOpen: boolean;
@@ -14,9 +15,10 @@ interface ArticleModalProps {
   categories: Category[];
   isLoading?: boolean;
   existingSources?: string[];
+  token: string;
 }
 
-const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave, article, categories, isLoading, existingSources = [] }) => {
+const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave, article, categories, isLoading, existingSources = [], token }) => {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [isActive, setIsActive] = useState(true);
@@ -31,10 +33,13 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
   const [sources, setSources] = useState<string[]>(['']);
   
   const [error, setError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       setError('');
+      setIsUploading(false);
       if (article) {
         setTitle(article.title);
         setCategoryId(typeof article.category === 'string' ? article.category : article.category._id);
@@ -117,6 +122,31 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
   const addSource = () => setSources(prev => [...prev, '']);
   const removeSource = (index: number) => setSources(prev => prev.filter((_, i) => i !== index));
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          setError("L'image est trop volumineuse (max 5MB).");
+          return;
+      }
+      
+      setIsUploading(true);
+      setError('');
+
+      try {
+          // Upload to backend
+          const uploadedUrl = await uploadImage(token, file);
+          handleFixedArrayChange(setImageUrls, index, uploadedUrl);
+      } catch (err) {
+          setError(err instanceof Error ? err.message : "Échec du téléchargement de l'image.");
+          // Reset file input so user can try again
+          if (fileInputRefs.current[index]) fileInputRefs.current[index]!.value = '';
+      } finally {
+          setIsUploading(false);
+      }
+    }
+  };
+
   const isFutureSchedule = () => {
     if (!scheduledDate) return false;
     const time = scheduledTime || '00:00';
@@ -135,6 +165,8 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (isUploading) return;
 
     if (!categoryId) {
         setError("Veuillez sélectionner une catégorie.");
@@ -330,51 +362,89 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
                     <div>
                         <label className="block text-sm font-medium text-text-secondary mb-3">Images (2 obligatoires)</label>
                         <div className="space-y-6">
-                            {/* Image 1 */}
-                            <div className="bg-gray-50 p-3 rounded-lg border border-border-color">
-                                <label className="block text-xs font-bold text-text-secondary mb-1.5">Image principale (URL)</label>
-                                <input 
-                                    type="text" 
-                                    value={imageUrls[0]} 
-                                    onChange={(e) => handleFixedArrayChange(setImageUrls, 0, e.target.value)} 
-                                    className={inputBaseClass}
-                                    placeholder="https://example.com/image1.jpg"
-                                />
-                                {imageUrls[0] && (
-                                    <div className="mt-3">
-                                        <img 
-                                            src={imageUrls[0]} 
-                                            alt="Aperçu 1" 
-                                            className="w-full h-48 object-contain rounded-lg border border-border-color shadow-sm bg-white"
-                                            onError={(e) => (e.currentTarget.style.display = 'none')} 
-                                        />
-                                        <p className="text-xs text-center text-text-secondary mt-1">Aperçu réel</p>
+                            {[0, 1].map((index) => (
+                                <div key={index} className="bg-gray-50 p-4 rounded-lg border border-border-color">
+                                    <label className="block text-xs font-bold text-text-secondary mb-2">Image {index === 0 ? 'principale' : 'secondaire'}</label>
+                                    
+                                    <div className="flex flex-col sm:flex-row gap-4 items-start">
+                                        {/* Preview Area */}
+                                        {imageUrls[index] && (
+                                            <div className="relative w-32 h-32 flex-shrink-0 mx-auto sm:mx-0 group">
+                                                <img 
+                                                    src={imageUrls[index].startsWith('http') ? imageUrls[index] : `https://${imageUrls[index]}`} 
+                                                    alt={`Aperçu ${index + 1}`} 
+                                                    className="w-full h-full object-cover rounded-xl border border-border-color shadow-sm bg-white"
+                                                    onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/150?text=Erreur'; }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        handleFixedArrayChange(setImageUrls, index, '');
+                                                        if (fileInputRefs.current[index]) fileInputRefs.current[index]!.value = '';
+                                                    }}
+                                                    className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors border border-white shadow-sm"
+                                                    title="Supprimer l'image"
+                                                >
+                                                    <XIcon className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Controls */}
+                                        <div className="flex-1 w-full space-y-3">
+                                            {/* URL Input */}
+                                            <div className={`flex items-center w-full bg-background rounded-lg border border-border-color focus-within:ring-2 focus-within:ring-premier focus-within:border-premier overflow-hidden transition-all ${isUploading ? 'opacity-60 bg-gray-50' : ''}`}>
+                                                <span className="pl-3 pr-2 text-text-secondary text-sm border-r border-border-color bg-gray-50 h-full flex items-center">https://</span>
+                                                <input 
+                                                    type="text" 
+                                                    value={imageUrls[index].replace(/^https?:\/\//, '')} 
+                                                    onChange={(e) => handleFixedArrayChange(setImageUrls, index, e.target.value)} 
+                                                    placeholder="www.exemple.com/photo.jpg" 
+                                                    className="w-full bg-transparent py-2.5 px-3 text-text-primary placeholder:text-gray-400 focus:outline-none text-sm" 
+                                                    disabled={isUploading}
+                                                />
+                                            </div>
+
+                                            {/* OR separator */}
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-px bg-border-color flex-1"></div>
+                                                <span className="text-xs text-text-secondary uppercase font-medium">OU</span>
+                                                <div className="h-px bg-border-color flex-1"></div>
+                                            </div>
+
+                                            {/* Upload Button */}
+                                            <div>
+                                                <input 
+                                                    type="file" 
+                                                    ref={el => { fileInputRefs.current[index] = el }} 
+                                                    className="hidden" 
+                                                    accept="image/*" 
+                                                    onChange={(e) => handleFileChange(e, index)}
+                                                    disabled={isUploading}
+                                                />
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => fileInputRefs.current[index]?.click()}
+                                                    disabled={isUploading}
+                                                    className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-gray-300 rounded-lg text-sm text-text-secondary hover:text-premier hover:border-premier hover:bg-premier/5 transition-all bg-gray-50/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    {isUploading ? (
+                                                        <>
+                                                            <LoadingSpinnerIcon className="h-5 w-5 text-premier" />
+                                                            <span>Téléchargement...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <UploadIcon className="h-5 w-5" />
+                                                            <span>Choisir une image depuis l'appareil</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
-                            
-                            {/* Image 2 */}
-                            <div className="bg-gray-50 p-3 rounded-lg border border-border-color">
-                                <label className="block text-xs font-bold text-text-secondary mb-1.5">Image secondaire (URL)</label>
-                                <input 
-                                    type="text" 
-                                    value={imageUrls[1]} 
-                                    onChange={(e) => handleFixedArrayChange(setImageUrls, 1, e.target.value)} 
-                                    className={inputBaseClass}
-                                    placeholder="https://example.com/image2.jpg"
-                                />
-                                {imageUrls[1] && (
-                                    <div className="mt-3">
-                                        <img 
-                                            src={imageUrls[1]} 
-                                            alt="Aperçu 2" 
-                                            className="w-full h-48 object-contain rounded-lg border border-border-color shadow-sm bg-white"
-                                            onError={(e) => (e.currentTarget.style.display = 'none')} 
-                                        />
-                                        <p className="text-xs text-center text-text-secondary mt-1">Aperçu réel</p>
-                                    </div>
-                                )}
-                            </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
@@ -413,15 +483,15 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
             <div className="px-6 py-4 flex flex-row-reverse items-center gap-3 border-t border-border-color bg-gray-50 rounded-b-lg">
                 <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || isUploading}
                     className="inline-flex justify-center rounded-lg shadow-sm px-5 py-2.5 bg-premier text-base font-semibold text-white hover:bg-premier-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier sm:text-sm disabled:opacity-50"
                 >
-                    {isLoading ? 'Enregistrement...' : 'Enregistrer'}
+                    {isLoading || isUploading ? 'Enregistrement...' : 'Enregistrer'}
                 </button>
                 <button
                     type="button"
                     onClick={onClose}
-                    disabled={isLoading}
+                    disabled={isLoading || isUploading}
                     className="inline-flex justify-center rounded-lg border border-border-color shadow-sm px-5 py-2.5 bg-white text-base font-semibold text-text-primary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier sm:text-sm disabled:opacity-50"
                 >
                     Annuler

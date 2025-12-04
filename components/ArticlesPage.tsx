@@ -338,6 +338,7 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ token, onLogout }) => {
         categories={articleCategories}
         isLoading={isSubmitting}
         existingSources={allSources}
+        token={token}
       />
       
       <ConfirmationModal

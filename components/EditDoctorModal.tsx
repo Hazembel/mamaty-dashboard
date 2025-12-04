@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { Doctor } from '../types';
-import { XIcon } from './icons';
+import { XIcon, UploadIcon, LoadingSpinnerIcon } from './icons';
 import Avatar from './Avatar';
 import Dropdown from './Dropdown';
 import CreatableSelect from './CreatableSelect';
 import { tunisianCities } from '../lib/tunisianCities';
+import { uploadImage } from '../services/adminService';
 
 interface DoctorModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface DoctorModalProps {
   doctor: Doctor | null;
   isLoading?: boolean;
   specialties: string[];
+  token: string;
 }
 
 const cityOptions = [
@@ -40,7 +42,7 @@ const formatPhoneNumber = (phone: string | undefined): string => {
 };
 
 
-const EditDoctorModal: React.FC<DoctorModalProps> = ({ isOpen, onClose, onSave, doctor, isLoading, specialties }) => {
+const EditDoctorModal: React.FC<DoctorModalProps> = ({ isOpen, onClose, onSave, doctor, isLoading, specialties, token }) => {
   const [formData, setFormData] = useState({
     name: '',
     specialty: '',
@@ -53,12 +55,15 @@ const EditDoctorModal: React.FC<DoctorModalProps> = ({ isOpen, onClose, onSave, 
     address: '',
   });
   const [error, setError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const isEditMode = !!doctor;
 
   useEffect(() => {
     if (isOpen) {
         setError('');
+        setIsUploading(false);
         if (isEditMode && doctor) {
           setFormData({
             name: doctor.name || '',
@@ -99,6 +104,31 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
     setFormData(prev => ({...prev, phone: formatted}));
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          setError("L'image est trop volumineuse (max 5MB).");
+          return;
+      }
+      
+      setIsUploading(true);
+      setError(''); // Clear previous errors
+
+      try {
+          // Upload to backend
+          const uploadedUrl = await uploadImage(token, file);
+          setFormData(prev => ({ ...prev, imageUrl: uploadedUrl }));
+      } catch (err) {
+          setError(err instanceof Error ? err.message : "Échec du téléchargement de l'image.");
+          // Reset file input so user can try again
+          if (fileInputRef.current) fileInputRef.current.value = '';
+      } finally {
+          setIsUploading(false);
+      }
+    }
+  };
+
   const handleInvalid = (e: React.FormEvent<HTMLInputElement>, message: string) => {
     (e.target as HTMLInputElement).setCustomValidity(message);
   };
@@ -111,6 +141,10 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
     e.preventDefault();
     setError('');
     
+    if (isUploading) {
+        return; // Prevent submit during upload
+    }
+
     if (!formData.city) {
       setError('Veuillez sélectionner une ville.');
       return;
@@ -242,13 +276,91 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
                   <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className={inputBaseClass} />
                 </div>
               </div>
+              
+              {/* Image Section with Preview */}
               <div>
-                <label htmlFor="imageUrl" className="block text-sm font-medium text-text-secondary mb-1">URL de l'image</label>
-                 <div className="flex items-center w-full bg-background rounded-lg focus-within:ring-2 focus-within:ring-premier focus-within:bg-white transition-colors overflow-hidden">
-                    <span className="pl-4 pr-2 text-text-secondary border-r border-gray-200">https://</span>
-                    <input type="text" name="imageUrl" id="imageUrl" value={formData.imageUrl.replace(/^https?:\/\//, '')} onChange={(e) => setFormData(prev => ({...prev, imageUrl: e.target.value}))} placeholder="example.com/image.png" className="w-full bg-transparent py-2.5 px-3 text-text-primary placeholder:text-gray-400 focus:outline-none" />
+                <label className="block text-sm font-medium text-text-secondary mb-2">Photo de profil</label>
+                
+                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                    {/* Preview Area */}
+                    {formData.imageUrl && (
+                        <div className="relative w-32 h-32 flex-shrink-0 mx-auto sm:mx-0 group">
+                            <img 
+                                src={formData.imageUrl.startsWith('http') ? formData.imageUrl : `https://${formData.imageUrl}`} 
+                                alt="Aperçu" 
+                                className="w-full h-full object-cover rounded-xl border border-border-color shadow-sm bg-gray-50"
+                                onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/150?text=Erreur'; }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFormData(prev => ({...prev, imageUrl: ''}));
+                                    if (fileInputRef.current) fileInputRef.current.value = '';
+                                }}
+                                className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors border border-white shadow-sm"
+                                title="Supprimer l'image"
+                            >
+                                <XIcon className="h-4 w-4" />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Controls */}
+                    <div className="flex-1 w-full space-y-3">
+                         {/* URL Input */}
+                         <div className={`flex items-center w-full bg-background rounded-lg border border-border-color focus-within:ring-2 focus-within:ring-premier focus-within:border-premier overflow-hidden transition-all ${isUploading ? 'opacity-60 bg-gray-50' : ''}`}>
+                            <span className="pl-3 pr-2 text-text-secondary text-sm border-r border-border-color bg-gray-50 h-full flex items-center">https://</span>
+                            <input 
+                                type="text" 
+                                name="imageUrl" 
+                                value={formData.imageUrl.replace(/^https?:\/\//, '')} 
+                                onChange={(e) => setFormData(prev => ({...prev, imageUrl: e.target.value}))} 
+                                placeholder="www.exemple.com/photo.jpg" 
+                                className="w-full bg-transparent py-2.5 px-3 text-text-primary placeholder:text-gray-400 focus:outline-none text-sm" 
+                                disabled={isUploading}
+                            />
+                        </div>
+
+                        {/* OR separator */}
+                        <div className="flex items-center gap-2">
+                            <div className="h-px bg-border-color flex-1"></div>
+                            <span className="text-xs text-text-secondary uppercase font-medium">OU</span>
+                            <div className="h-px bg-border-color flex-1"></div>
+                        </div>
+
+                        {/* Upload Button */}
+                        <div>
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                className="hidden" 
+                                accept="image/*" 
+                                onChange={handleFileChange}
+                                disabled={isUploading}
+                            />
+                            <button 
+                                type="button" 
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploading}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-gray-300 rounded-lg text-sm text-text-secondary hover:text-premier hover:border-premier hover:bg-premier/5 transition-all bg-gray-50/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isUploading ? (
+                                    <>
+                                        <LoadingSpinnerIcon className="h-5 w-5 text-premier" />
+                                        <span>Téléchargement...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <UploadIcon className="h-5 w-5" />
+                                        <span>Choisir une image depuis l'appareil</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
                 </div>
               </div>
+
               <div>
                 <label htmlFor="workTime" className="block text-sm font-medium text-text-secondary mb-1">Horaires de travail</label>
                 <input type="text" name="workTime" id="workTime" value={formData.workTime} onChange={handleChange} placeholder="ex: Lun-Ven 9:00-17:00" className={inputBaseClass} />
@@ -264,15 +376,15 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
           <div className="px-6 py-4 flex flex-row-reverse items-center gap-3 border-t border-border-color mt-6">
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isUploading}
               className="inline-flex justify-center rounded-lg shadow-sm px-5 py-2.5 bg-premier text-base font-semibold text-white hover:bg-premier-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier sm:text-sm disabled:opacity-50"
             >
-              {isLoading ? 'Enregistrement...' : 'Enregistrer'}
+              {isLoading || isUploading ? 'Enregistrement...' : 'Enregistrer'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              disabled={isLoading}
+              disabled={isLoading || isUploading}
               className="inline-flex justify-center rounded-lg border border-border-color shadow-sm px-5 py-2.5 bg-white text-base font-semibold text-text-primary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-premier sm:text-sm disabled:opacity-50"
             >
               Annuler

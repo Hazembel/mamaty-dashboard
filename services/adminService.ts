@@ -144,3 +144,31 @@ export const updateProfile = async (token: string, userData: Partial<User>): Pro
   const user = data.user || data.admin || data.data || data;
   return user;
 };
+
+export const uploadImage = async (token: string, file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const response = await fetch(`${ADMIN_URL}/upload-image`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      // Content-Type is set automatically by the browser with the boundary for FormData
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let message = "Erreur lors du téléchargement de l'image";
+    try {
+        const errorData = await response.json();
+        message = errorData.message || message;
+    } catch (e) {
+        // ignore JSON parse error
+    }
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  return data.url;
+};

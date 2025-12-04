@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { getDoctors, createDoctor, updateDoctor, deleteDoctor } from '../services/doctorService';
 import { Doctor } from '../types';
@@ -281,6 +282,7 @@ const DoctorsPage: React.FC<DoctorsPageProps> = ({ token, onLogout }) => {
         doctor={doctorToEdit}
         isLoading={isSubmitting}
         specialties={uniqueSpecialties}
+        token={token}
       />
       
       <ConfirmationModal

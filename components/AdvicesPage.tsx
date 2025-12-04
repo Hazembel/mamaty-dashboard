@@ -38,7 +38,7 @@ const Toast: React.FC<{ message: string; type: 'success' | 'error'; onClose: () 
 };
 
 const AGE_TABS = [
-    { id: 'all', label: 'Les restes', min: -1, max: -1 },
+    { id: 'all', label: 'Autres', min: -1, max: -1 },
     { id: '6-9', label: '6 - 9 mois (180 - 270 j)', min: 180, max: 270 },
 ];
 
@@ -399,6 +399,7 @@ const AdvicesPage: React.FC<AdvicesPageProps> = ({ token, onLogout }) => {
         usedDays={usedDays}
         isLoading={isSubmitting}
         existingSources={allSources}
+        token={token}
       />
       
       <ConfirmationModal
