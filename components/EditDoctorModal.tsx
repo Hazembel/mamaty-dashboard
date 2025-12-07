@@ -41,6 +41,11 @@ const formatPhoneNumber = (phone: string | undefined): string => {
     return `+216 ${formattedNumber}`.trim();
 };
 
+const ensureAbsoluteUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `https://${url}`;
+};
 
 const EditDoctorModal: React.FC<DoctorModalProps> = ({ isOpen, onClose, onSave, doctor, isLoading, specialties, token }) => {
   const [formData, setFormData] = useState({
@@ -52,7 +57,8 @@ const EditDoctorModal: React.FC<DoctorModalProps> = ({ isOpen, onClose, onSave, 
     description: '',
     workTime: 'Lun-Ven 09:00 - 17:00',
     phone: '',
-    address: '',
+    googleMapLink: '',
+    appStoreLink: '',
   });
   const [error, setError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -74,7 +80,8 @@ const EditDoctorModal: React.FC<DoctorModalProps> = ({ isOpen, onClose, onSave, 
             description: doctor.description || '',
             workTime: doctor.workTime || '',
             phone: formatPhoneNumber(doctor.phone),
-            address: doctor.address || '',
+            googleMapLink: doctor.googleMapLink || '',
+            appStoreLink: doctor.appStoreLink || '',
           });
         } else {
           setFormData({
@@ -83,12 +90,11 @@ const EditDoctorModal: React.FC<DoctorModalProps> = ({ isOpen, onClose, onSave, 
             rating: '3.0',
             city: '',
             imageUrl: '',
-            description: `Dr. [Nom du médecin] est un(e) [spécialité] reconnu(e), dédié(e) à offrir des soins médicaux de haute qualité. 
-Avec une expertise approfondie dans [domaines/expertises], il/elle accompagne ses patients dans le diagnostic, 
-le traitement et la prévention des maladies, en mettant l’accent sur une approche personnalisée et humaine.`,
+            description: '',
             workTime: 'Lun-Ven 09:00 - 17:00',
             phone: '+216 ',
-            address: '',
+            googleMapLink: '',
+            appStoreLink: '',
           });
         }
     }
@@ -102,6 +108,10 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value);
     setFormData(prev => ({...prev, phone: formatted}));
+  };
+
+  const handleCityChange = (value: string) => {
+    setFormData(prev => ({ ...prev, city: value }));
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -245,7 +255,7 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
                   <Dropdown
                     options={cityOptions}
                     value={formData.city}
-                    onChange={(value) => setFormData(prev => ({ ...prev, city: value }))}
+                    onChange={handleCityChange}
                   />
                 </div>
                  <div>
@@ -266,15 +276,64 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-text-secondary mb-1">Téléphone</label>
-                  <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handlePhoneChange} className={inputBaseClass} />
-                </div>
-                <div>
-                  <label htmlFor="address" className="block text-sm font-medium text-text-secondary mb-1">Adresse</label>
-                  <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className={inputBaseClass} />
-                </div>
+              
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-text-secondary mb-1">Téléphone</label>
+                <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handlePhoneChange} className={inputBaseClass} />
+              </div>
+
+              {/* Map Links Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 bg-gray-50 p-4 rounded-lg border border-border-color">
+                  <div>
+                      <label htmlFor="googleMapLink" className="block text-sm font-medium text-text-secondary mb-1">Lien Google Maps</label>
+                      <div className="flex gap-2">
+                          <input 
+                              type="text" 
+                              name="googleMapLink" 
+                              id="googleMapLink" 
+                              value={formData.googleMapLink} 
+                              onChange={handleChange} 
+                              className={inputBaseClass} 
+                              placeholder="https://maps.google.com/..."
+                          />
+                          {formData.googleMapLink && (
+                              <a 
+                                  href={ensureAbsoluteUrl(formData.googleMapLink)} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="p-2.5 bg-white rounded-lg text-blue-600 hover:text-blue-800 border border-gray-200 hover:border-blue-300 flex-shrink-0 transition-colors flex items-center justify-center shadow-sm" 
+                                  title="Tester le lien"
+                              >
+                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                              </a>
+                          )}
+                      </div>
+                  </div>
+                  <div>
+                      <label htmlFor="appStoreLink" className="block text-sm font-medium text-text-secondary mb-1">Lien Apple Maps</label>
+                      <div className="flex gap-2">
+                          <input 
+                              type="text" 
+                              name="appStoreLink" 
+                              id="appStoreLink" 
+                              value={formData.appStoreLink} 
+                              onChange={handleChange} 
+                              className={inputBaseClass} 
+                              placeholder="http://maps.apple.com/..."
+                          />
+                           {formData.appStoreLink && (
+                              <a 
+                                  href={ensureAbsoluteUrl(formData.appStoreLink)} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="p-2.5 bg-white rounded-lg text-blue-600 hover:text-blue-800 border border-gray-200 hover:border-blue-300 flex-shrink-0 transition-colors flex items-center justify-center shadow-sm" 
+                                  title="Tester le lien"
+                              >
+                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                              </a>
+                          )}
+                      </div>
+                  </div>
               </div>
               
               {/* Image Section with Preview */}
@@ -308,15 +367,14 @@ le traitement et la prévention des maladies, en mettant l’accent sur une appr
                     {/* Controls */}
                     <div className="flex-1 w-full space-y-3">
                          {/* URL Input */}
-                         <div className={`flex items-center w-full bg-background rounded-lg border border-border-color focus-within:ring-2 focus-within:ring-premier focus-within:border-premier overflow-hidden transition-all ${isUploading ? 'opacity-60 bg-gray-50' : ''}`}>
-                            <span className="pl-3 pr-2 text-text-secondary text-sm border-r border-border-color bg-gray-50 h-full flex items-center">https://</span>
+                         <div className="w-full">
                             <input 
                                 type="text" 
                                 name="imageUrl" 
-                                value={formData.imageUrl.replace(/^https?:\/\//, '')} 
+                                value={formData.imageUrl} 
                                 onChange={(e) => setFormData(prev => ({...prev, imageUrl: e.target.value}))} 
-                                placeholder="www.exemple.com/photo.jpg" 
-                                className="w-full bg-transparent py-2.5 px-3 text-text-primary placeholder:text-gray-400 focus:outline-none text-sm" 
+                                placeholder="https://exemple.com/photo.jpg" 
+                                className={inputBaseClass} 
                                 disabled={isUploading}
                             />
                         </div>

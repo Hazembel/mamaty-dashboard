@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Doctor } from '../types';
 import { TrashIcon, PencilIcon } from './icons';
@@ -66,7 +67,7 @@ const DoctorTable: React.FC<DoctorTableProps> = ({ doctors, onEdit, onDelete }) 
                   </div>
                   <div className="ml-4">
                     <div className="text-sm font-medium text-text-primary">{doctor.name}</div>
-                    <div className="text-sm text-text-secondary">{doctor.address || 'Adresse non spécifiée'}</div>
+                    <div className="text-sm text-text-secondary">{doctor.city || 'Ville non spécifiée'}</div>
                   </div>
                 </div>
               </td>

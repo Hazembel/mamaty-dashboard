@@ -51,7 +51,8 @@ export interface Doctor {
   description?: string;
   workTime?: string;
   phone?: string;
-  address?: string;
+  googleMapLink?: string;
+  appStoreLink?: string;
   createdAt?: string;
   updatedAt?: string;
 }

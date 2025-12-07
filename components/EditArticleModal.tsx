@@ -393,14 +393,13 @@ const EditArticleModal: React.FC<ArticleModalProps> = ({ isOpen, onClose, onSave
                                         {/* Controls */}
                                         <div className="flex-1 w-full space-y-3">
                                             {/* URL Input */}
-                                            <div className={`flex items-center w-full bg-background rounded-lg border border-border-color focus-within:ring-2 focus-within:ring-premier focus-within:border-premier overflow-hidden transition-all ${isUploading ? 'opacity-60 bg-gray-50' : ''}`}>
-                                                <span className="pl-3 pr-2 text-text-secondary text-sm border-r border-border-color bg-gray-50 h-full flex items-center">https://</span>
+                                            <div className="w-full">
                                                 <input 
                                                     type="text" 
-                                                    value={imageUrls[index].replace(/^https?:\/\//, '')} 
+                                                    value={imageUrls[index]} 
                                                     onChange={(e) => handleFixedArrayChange(setImageUrls, index, e.target.value)} 
-                                                    placeholder="www.exemple.com/photo.jpg" 
-                                                    className="w-full bg-transparent py-2.5 px-3 text-text-primary placeholder:text-gray-400 focus:outline-none text-sm" 
+                                                    placeholder="https://exemple.com/photo.jpg" 
+                                                    className={inputBaseClass} 
                                                     disabled={isUploading}
                                                 />
                                             </div>

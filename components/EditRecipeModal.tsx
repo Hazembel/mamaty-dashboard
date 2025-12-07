@@ -21,7 +21,7 @@ interface RecipeModalProps {
 }
 
 const cityOptions = [
-    { value: '', label: 'Non spécifiée' },
+    { value: 'Aucune', label: 'Aucune' },
     ...tunisianCities.map(city => ({ value: city, label: city }))
 ];
 
@@ -36,7 +36,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
   const [rating, setRating] = useState('4.5');
   const [imageUrl, setImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState('Aucune');
   const [minDay, setMinDay] = useState('270'); // 9 months
   const [maxDay, setMaxDay] = useState('720'); // 24 months
   const [isActive, setIsActive] = useState(true);
@@ -69,7 +69,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
         setRating(recipe.rating.toString());
         setImageUrl(recipe.imageUrl);
         setVideoUrl(recipe.videoUrl || '');
-        setCity(recipe.city || '');
+        setCity(recipe.city || 'Aucune');
         setMinDay(recipe.minDay?.toString() || '270');
         setMaxDay(recipe.maxDay?.toString() || '720');
         setIsActive(recipe.isActive !== false);
@@ -113,7 +113,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
         setRating('4.5');
         setImageUrl('');
         setVideoUrl('');
-        setCity('');
+        setCity('Aucune');
         setMinDay('270');
         setMaxDay('720');
         setIsActive(true);
@@ -252,35 +252,17 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
         return;
     }
 
-    // --- DETAILS TAB VALIDATION ---
-    const cleanIngredients = ingredients.filter(i => i.name.trim() !== '');
-    const cleanInstructions = instructions.filter(i => i.trim() !== '');
-    
-    if (cleanIngredients.length === 0) {
-        setActiveTab('details');
-        setError("Veuillez ajouter au moins un ingrédient avec un nom.");
-        return;
-    }
-    if (cleanInstructions.length === 0) {
-        setActiveTab('details');
-        setError("Veuillez ajouter au moins une étape de préparation.");
-        return;
-    }
-
     // --- MEDIA TAB VALIDATION ---
-    const cleanSources = sources.filter(s => s.trim() !== '');
-
     if (!imageUrl.trim()) {
         setActiveTab('media');
         setError("L'image de la recette est manquante. Veuillez ajouter une URL d'image valide.");
         return;
     }
 
-    if (cleanSources.length === 0) {
-        setActiveTab('media');
-        setError("La source est manquante. Veuillez ajouter au moins une source ou un crédit.");
-        return;
-    }
+    // Prepare clean data arrays (remove empty entries)
+    const cleanIngredients = ingredients.filter(i => i.name.trim() !== '');
+    const cleanInstructions = instructions.filter(i => i.trim() !== '');
+    const cleanSources = sources.filter(s => s.trim() !== '');
 
     let finalScheduledAt = null;
     if (scheduledDate) {
@@ -300,7 +282,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
       instructions: cleanInstructions,
       imageUrl,
       videoUrl,
-      city,
+      city: city.trim() || 'Aucune', // Force 'Aucune' if empty
       sources: cleanSources,
       rating: parseFloat(rating),
       minDay: parseInt(minDay),
@@ -334,12 +316,13 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
   const futureSchedule = isFutureSchedule();
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex items-center justify-center p-2 sm:p-4" aria-modal="true" role="dialog">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[95vh] sm:max-h-[90vh] transform transition-all">
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex items-center justify-center p-0 sm:p-4" aria-modal="true" role="dialog">
+        {/* Full width/height on mobile, standard modal on desktop */}
+        <div className="bg-white sm:rounded-xl shadow-2xl w-full max-w-6xl flex flex-col h-full sm:h-auto sm:max-h-[90vh] transform transition-all">
             <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
             
-            <div className="p-4 sm:p-6 border-b border-border-color flex justify-between items-center bg-white rounded-t-xl z-10">
-                 <h3 className="text-lg sm:text-2xl font-bold text-text-primary truncate pr-2">
+            <div className="p-4 sm:p-5 border-b border-border-color flex justify-between items-center bg-white z-10 shrink-0">
+                 <h3 className="text-lg sm:text-xl font-bold text-text-primary truncate pr-2">
                     {recipe ? "Modifier la recette" : "Ajouter une recette"}
                 </h3>
                 <button type="button" onClick={onClose} className="p-2 rounded-full text-text-secondary hover:bg-gray-100 transition-colors flex-shrink-0">
@@ -347,22 +330,29 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                 </button>
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-border-color bg-gray-50/50 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-                {tabs.map(tab => (
-                    <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex-1 flex items-center justify-center min-w-fit whitespace-nowrap py-3 px-3 sm:px-6 font-medium text-sm border-b-2 transition-colors ${activeTab === tab.id ? 'border-premier text-premier' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
-                    >
-                        <span className="sm:hidden">{tab.mobileLabel}</span>
-                        <span className="hidden sm:inline">{tab.label}</span>
-                    </button>
-                ))}
+            {/* Segmented Control Tabs */}
+            <div className="px-4 py-3 bg-white shrink-0 border-b border-border-color/50">
+                <div className="flex p-1 bg-gray-100 rounded-lg">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`
+                                flex-1 flex items-center justify-center py-2 text-sm font-medium rounded-md transition-all duration-200
+                                ${activeTab === tab.id 
+                                    ? 'bg-white text-premier shadow-sm' 
+                                    : 'text-text-secondary hover:text-text-primary hover:bg-gray-200/50'}
+                            `}
+                        >
+                            <span className="sm:hidden">{tab.mobileLabel}</span>
+                            <span className="hidden sm:inline">{tab.label}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            <div className="p-3 sm:p-8 overflow-y-auto flex-1 custom-scrollbar bg-white">
+            <div className="p-4 sm:p-8 overflow-y-auto flex-1 custom-scrollbar bg-white">
                 {/* General Info Tab */}
                 {activeTab === 'info' && (
                     <div className="space-y-6 sm:space-y-8 animate-fade-in-up">
@@ -532,7 +522,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                                                     value={item.name}
                                                     onChange={(val) => handleIngredientChange(idx, 'name', val)}
                                                     placeholder="Nom (ex: Farine)"
-                                                    required
+                                                    // Removed required to allow empty saves as requested
                                                 />
                                             </div>
 
@@ -548,7 +538,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                                                         placeholder="Qte" 
                                                         onInvalid={handleInvalid}
                                                         onInput={handleInput}
-                                                        required
+                                                        // Removed required
                                                     />
                                                  </div>
                                                  <div className="w-1/2 relative">
@@ -616,7 +606,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                                                     onChange={(e) => handleInstructionChange(idx, e.target.value)} 
                                                     className={`${inputBaseClass} bg-white w-full`} 
                                                     placeholder={`Décrivez l'action à réaliser...`} 
-                                                    required
+                                                    // Removed required
                                                     onInvalid={handleInvalid}
                                                     onInput={handleInput}
                                                 />
@@ -670,16 +660,15 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
 
                                     {/* Controls */}
                                     <div className="flex-1 w-full space-y-3">
-                                         <div className={`flex items-center w-full bg-background rounded-lg border border-border-color focus-within:ring-2 focus-within:ring-premier focus-within:border-premier overflow-hidden transition-all ${isUploading ? 'opacity-60 bg-gray-50' : ''}`}>
-                                            <span className="pl-3 pr-2 text-text-secondary text-sm border-r border-border-color bg-gray-50 h-full flex items-center">https://</span>
+                                         <div className="w-full">
                                             <input 
                                                 type="text" 
-                                                value={imageUrl.replace(/^https?:\/\//, '')} 
+                                                value={imageUrl} 
                                                 onChange={(e) => setImageUrl(e.target.value)} 
                                                 onInvalid={handleInvalid}
                                                 onInput={handleInput} 
-                                                className="w-full bg-transparent py-2.5 px-3 text-text-primary placeholder:text-gray-400 focus:outline-none text-sm" 
-                                                placeholder="www.exemple.com/recette.jpg" 
+                                                className={inputBaseClass} 
+                                                placeholder="https://exemple.com/recette.jpg" 
                                                 disabled={isUploading}
                                             />
                                         </div>
@@ -744,7 +733,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                                                         value={item}
                                                         onChange={(val) => handleSourceChange(idx, val.toUpperCase())}
                                                         placeholder="ex: CHEF UNTEL"
-                                                        required
+                                                        // Removed required
                                                     />
                                                  </div>
                                                  <button type="button" onClick={() => removeSource(idx)} className="text-text-secondary hover:text-red-500 p-2">
@@ -762,7 +751,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                 {error && <p className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-lg mt-6 font-medium border border-red-100">{error}</p>}
             </div>
 
-            <div className="p-4 sm:p-6 border-t border-border-color bg-gray-50 rounded-b-xl flex flex-col sm:flex-row-reverse items-center gap-3 z-10">
+            <div className="p-4 sm:p-6 border-t border-border-color bg-gray-50 sm:rounded-b-xl flex flex-col sm:flex-row-reverse items-center gap-3 z-10 shrink-0">
                 <button
                     type="submit"
                     disabled={isLoading || isUploading}
