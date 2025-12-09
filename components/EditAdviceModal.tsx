@@ -267,10 +267,13 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
                     </div>
 
                     {/* Timing with Grid */}
-                    <div className="bg-gray-50 p-5 rounded-xl border border-border-color">
-                        <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-bold text-text-primary">Ciblage temporel (6-9 mois)</h4>
-                            <label className="inline-flex items-center cursor-pointer">
+                    <div className="bg-gray-50 p-4 sm:p-5 rounded-xl border border-border-color transition-all duration-300">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                            <div>
+                                <h4 className="text-sm font-bold text-text-primary">Ciblage temporel (6-9 mois)</h4>
+                                <p className="text-xs text-text-secondary mt-0.5">Assigner ce conseil à un jour précis du programme.</p>
+                            </div>
+                            <label className="inline-flex items-center cursor-pointer select-none self-start sm:self-auto">
                                 <input 
                                     type="checkbox" 
                                     className="sr-only" 
@@ -283,30 +286,27 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
                                 <div className={`relative w-11 h-6 transition-colors rounded-full ${hasDayTargeting ? 'bg-premier' : 'bg-gray-300'}`}>
                                     <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasDayTargeting ? 'translate-x-5' : ''}`}></div>
                                 </div>
-                                <span className="ml-3 text-sm font-medium text-text-secondary">Activer</span>
+                                <span className="ml-3 text-sm font-medium text-text-secondary">
+                                    {hasDayTargeting ? 'Activé' : 'Désactivé'}
+                                </span>
                             </label>
                         </div>
                         
                         {hasDayTargeting ? (
                             <div className="mt-4 animate-fade-in-up">
-                                <div className="flex justify-between items-end mb-2">
-                                    <label className="block text-xs font-medium text-text-secondary">
-                                        Sélectionnez un jour disponible (180 - 270)
-                                    </label>
-                                    <div className="flex gap-3 text-xs">
-                                        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-white border border-gray-300"></span><span>Libre</span></div>
-                                        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-200 border border-gray-300 opacity-50"></span><span>Pris</span></div>
-                                        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-premier"></span><span>Sélectionné</span></div>
+                                <div className="flex flex-col sm:flex-row justify-between sm:items-end mb-3 gap-2">
+                                    <div className="flex gap-4 text-xs font-medium text-text-secondary">
+                                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-white border border-gray-300 shadow-sm"></span><span>Libre</span></div>
+                                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-100 border border-gray-200"></span><span>Pris</span></div>
+                                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-premier border border-premier"></span><span>Sélectionné</span></div>
                                     </div>
                                 </div>
                                 
-                                <div className="grid grid-cols-10 sm:grid-cols-12 gap-1.5 p-2 bg-white border border-border-color rounded-lg max-h-48 overflow-y-auto">
+                                <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2 p-3 bg-white border border-border-color rounded-xl max-h-64 overflow-y-auto custom-scrollbar shadow-inner">
                                     {daysRange.map((d) => {
                                         const isUsed = usedDays.includes(d);
-                                        const isCurrent = d === advice?.day; // Allow selecting the day currently owned by this advice
+                                        const isCurrent = d === advice?.day; 
                                         const isSelected = day === d;
-                                        
-                                        // Disabled if used by SOMEONE ELSE (isUsed) AND NOT CURRENT (isCurrent)
                                         const isDisabled = isUsed && !isCurrent;
 
                                         return (
@@ -316,12 +316,12 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
                                                 disabled={isDisabled}
                                                 onClick={() => setDay(d)}
                                                 className={`
-                                                    h-8 w-full rounded flex items-center justify-center text-xs font-medium transition-all
+                                                    relative h-10 rounded-lg flex items-center justify-center text-xs font-semibold transition-all duration-200
                                                     ${isSelected 
-                                                        ? 'bg-premier text-white shadow-md transform scale-110 z-10' 
+                                                        ? 'bg-premier text-white shadow-md scale-105 ring-2 ring-premier ring-offset-1 z-10' 
                                                         : isDisabled 
-                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed line-through' 
-                                                            : 'bg-white text-text-primary hover:bg-purple-50 hover:text-premier border border-gray-100'}
+                                                            ? 'bg-gray-50 text-gray-300 cursor-not-allowed' 
+                                                            : 'bg-white text-text-secondary hover:text-premier hover:bg-premier/5 border border-gray-100 hover:border-premier/30'}
                                                 `}
                                                 title={isDisabled ? `Jour ${d} déjà utilisé` : `Sélectionner jour ${d}`}
                                             >
@@ -330,12 +330,20 @@ const EditAdviceModal: React.FC<AdviceModalProps> = ({ isOpen, onClose, onSave, 
                                         );
                                     })}
                                 </div>
+                                
                                 {day && (
-                                     <p className="text-sm text-premier font-medium mt-2 text-right">Jour sélectionné : <span className="font-bold">{day}</span></p>
+                                     <div className="mt-4 p-3 bg-premier/5 border border-premier/10 rounded-lg flex justify-between items-center animate-fade-in-up">
+                                        <span className="text-sm text-text-secondary">Jour sélectionné :</span>
+                                        <span className="text-sm font-bold text-premier bg-white px-3 py-1 rounded shadow-sm">
+                                            Jour {day}
+                                        </span>
+                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <p className="text-sm text-text-secondary italic mt-1">Aucun ciblage temporel spécifique (S'affichera dans "Autres").</p>
+                            <div className="p-4 bg-gray-100 rounded-lg text-sm text-text-secondary text-center border-2 border-dashed border-gray-200">
+                                Ce conseil sera visible dans la catégorie "Autres".
+                            </div>
                         )}
                     </div>
 

@@ -8,9 +8,10 @@ interface CreatableSelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
+  capitalizeFirstLetter?: boolean;
 }
 
-const CreatableSelect: React.FC<CreatableSelectProps> = ({ options, value, onChange, placeholder, required }) => {
+const CreatableSelect: React.FC<CreatableSelectProps> = ({ options, value, onChange, placeholder, required, capitalizeFirstLetter }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -48,7 +49,11 @@ const CreatableSelect: React.FC<CreatableSelectProps> = ({ options, value, onCha
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+    let val = e.target.value;
+    if (capitalizeFirstLetter && val.length > 0) {
+      val = val.charAt(0).toUpperCase() + val.slice(1);
+    }
+    setSearchTerm(val);
     if (!isOpen) {
       setIsOpen(true);
     }

@@ -157,9 +157,14 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
   };
 
   const handleIngredientChange = (index: number, field: keyof Ingredient, value: string | number) => {
+    let finalValue = value;
+    if (field === 'name' && typeof value === 'string' && value.length > 0) {
+        finalValue = value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
     setIngredients(prev => {
         const newArr = [...prev];
-        newArr[index] = { ...newArr[index], [field]: value };
+        newArr[index] = { ...newArr[index], [field]: finalValue };
         return newArr;
     });
   };
@@ -522,6 +527,7 @@ const EditRecipeModal: React.FC<RecipeModalProps> = ({ isOpen, onClose, onSave, 
                                                     value={item.name}
                                                     onChange={(val) => handleIngredientChange(idx, 'name', val)}
                                                     placeholder="Nom (ex: Farine)"
+                                                    capitalizeFirstLetter={true}
                                                     // Removed required to allow empty saves as requested
                                                 />
                                             </div>
