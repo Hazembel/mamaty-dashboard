@@ -22,7 +22,14 @@ export const loginAdmin = async (email: string, password: string): Promise<strin
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error('[LOGIN ERROR] Corps de la réponse brute (erreur):', errorBody);
+      
+      // Downgrade 400-level errors (client errors) to Warnings to avoid cluttering "Critical" logs
+      // 'Invalid password' is a 400/401 typically.
+      if (response.status >= 400 && response.status < 500) {
+          console.warn('[LOGIN FAILED] Authentification échouée:', errorBody);
+      } else {
+          console.error('[LOGIN ERROR] Erreur serveur:', errorBody);
+      }
 
       let errorData;
       try {
@@ -73,9 +80,50 @@ export const loginAdmin = async (email: string, password: string): Promise<strin
     return data.token;
 
   } catch (error) {
-    console.error('[LOGIN CRITICAL] Erreur critique lors de la tentative de connexion:', error);
+    // Reduce noise for expected authentication errors
+    const msg = error instanceof Error ? error.message : String(error);
+    const isAuthError = msg.includes('incorrect') || msg.includes('introuvable') || msg.includes('invalide') || msg.includes('refusé');
+    
+    if (isAuthError) {
+        console.warn(`[LOGIN FAILURE] Échec d'authentification: ${msg}`);
+    } else {
+        console.error('[LOGIN CRITICAL] Erreur inattendue lors de la tentative de connexion:', error);
+    }
     throw error;
   }
+};
+
+export const createAdmin = async (token: string, adminData: Partial<User>): Promise<User> => {
+  // Use /users instead of /register to match backend route
+  const response = await fetch(`${ADMIN_URL}/users`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(adminData),
+  });
+
+  if (!response.ok) {
+    let errorData;
+    try {
+        errorData = await response.json();
+    } catch(e) {
+        // ignore json parse error
+    }
+    
+    let message = errorData?.message || "Impossible de créer l'administrateur";
+    
+    // Handle duplicates
+    if (typeof message === 'string' && message.includes('E11000 duplicate key error')) {
+        if (message.includes('email')) message = "Cet email est déjà utilisé.";
+    }
+
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  return data.admin || data.user || data;
 };
 
 export const getProfile = async (token: string): Promise<User> => {

@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, FormEvent, useMemo } from 'react';
 import { User } from '../types';
-import { XIcon } from './icons';
+import { XIcon, EyeIcon, EyeOffIcon } from './icons';
 import Avatar from './Avatar';
 import Dropdown from './Dropdown';
 import DatePicker from './DatePicker';
+import AvatarSelector from './AvatarSelector';
 
 interface UserModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface UserModalProps {
   user: User | null; // If null, it's in 'add' mode. Otherwise, 'edit' mode.
   isLoading?: boolean;
   hideRole?: boolean;
+  token?: string;
 }
 
 const genderOptions = [
@@ -27,21 +29,7 @@ const roleOptions = [
     { value: 'admin', label: 'Administrateur' },
 ];
 
-const MOM_AVATARS = [
-  "assets/images/avatars/mom1.jpg",
-  "assets/images/avatars/mom2.jpg",
-  "assets/images/avatars/mom3.jpg",
-  "assets/images/avatars/mom4.jpg",
-];
-
-const DAD_AVATARS = [
-  "assets/images/avatars/dad1.jpg",
-  "assets/images/avatars/dad2.jpg",
-  "assets/images/avatars/dad3.jpg",
-  "assets/images/avatars/dad4.jpg",
-];
-
-const EditUserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, user, isLoading, hideRole }) => {
+const EditUserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, user, isLoading, hideRole, token }) => {
   const [formData, setFormData] = useState({
     name: '',
     lastname: '',
@@ -55,6 +43,8 @@ const EditUserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, user
   });
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const isEditMode = !!user;
 
@@ -62,16 +52,28 @@ const EditUserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, user
     if (isOpen) {
         setError(''); // Reset error when modal opens
         setConfirmPassword('');
+        setShowPassword(false);
+        setShowConfirmPassword(false);
         if (isEditMode && user) {
           let formattedBirthday = '';
-          if (user.birthday && !user.birthday.startsWith('0000-00-00')) {
-            const dateString = user.birthday;
-            // Strict parsing to avoid timezone shifts. 
-            // If ISO string (e.g. 2000-01-19T00:00:00.000Z), just take the date part.
-            if (dateString.includes('T')) {
-                formattedBirthday = dateString.split('T')[0];
-            } else {
-                formattedBirthday = dateString;
+          if (user.birthday) {
+            const dateString = String(user.birthday);
+            
+            if (dateString !== 'undefined' && dateString !== 'null' && !dateString.startsWith('0000-00-00')) {
+                // Handle DD/MM/YYYY format (common in this backend)
+                if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
+                    const parts = dateString.split('/');
+                    if (parts.length === 3) {
+                        // Convert to YYYY-MM-DD for DatePicker
+                        formattedBirthday = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+                } 
+                // Handle ISO format (e.g. 2000-01-19T00:00:00.000Z)
+                else if (dateString.includes('T')) {
+                    formattedBirthday = dateString.split('T')[0];
+                } else {
+                    formattedBirthday = dateString;
+                }
             }
           }
 
@@ -115,16 +117,12 @@ const EditUserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, user
     target.setCustomValidity('');
   };
 
-  const availableAvatars = useMemo(() => {
-    if (formData.gender === 'female') return MOM_AVATARS;
-    if (formData.gender === 'male') return DAD_AVATARS;
-    // If other or not specified, show both
-    return [...MOM_AVATARS, ...DAD_AVATARS];
-  }, [formData.gender]);
-
   const calculateAge = (birthdayString: string) => {
+    if (!birthdayString) return 0;
     const today = new Date();
     const birthDate = new Date(birthdayString);
+    if (isNaN(birthDate.getTime())) return 0;
+    
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
@@ -275,30 +273,13 @@ const EditUserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, user
               {/* Avatar Selection */}
               <div className="col-span-full">
                 <label className="block text-sm font-medium text-text-secondary mb-3">Choisir un Avatar</label>
-                <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg border border-border-color max-h-40 overflow-y-auto custom-scrollbar">
-                  {availableAvatars.map((avatarSrc) => (
-                    <button
-                      key={avatarSrc}
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, avatar: avatarSrc }))}
-                      className={`relative rounded-full p-1 transition-all ${formData.avatar === avatarSrc ? 'ring-2 ring-premier ring-offset-2 bg-white' : 'hover:bg-gray-200'}`}
-                    >
-                      <img 
-                        src={avatarSrc} 
-                        alt="Avatar option" 
-                        className="w-12 h-12 rounded-full object-cover bg-gray-200"
-                        // Fallback in case local asset is missing during dev
-                        onError={(e) => e.currentTarget.src = `https://ui-avatars.com/api/?name=${avatarSrc.split('/').pop()}&background=random`} 
-                      />
-                    </button>
-                  ))}
-                </div>
-                {!availableAvatars.includes(formData.avatar) && formData.avatar && (
-                   <div className="mt-2 flex items-center gap-2 text-xs text-text-secondary">
-                      <span>Actuel (Personnalisé) :</span>
-                      <span className="font-mono bg-gray-100 px-1 rounded truncate max-w-xs">{formData.avatar}</span>
-                   </div>
-                )}
+                <AvatarSelector 
+                    section="parent"
+                    onSelect={(url) => setFormData(prev => ({ ...prev, avatar: url }))}
+                    selectedAvatar={formData.avatar}
+                    initialGender={formData.gender === 'female' ? 'female' : 'male'}
+                    token={token || ''}
+                />
               </div>
 
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
@@ -338,19 +319,44 @@ const EditUserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, user
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
                     <div>
                         <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-1">Mot de passe</label>
-                        <input 
-                            type="password" 
-                            name="password" 
-                            id="password" 
-                            value={formData.password} 
-                            onChange={handleChange} 
-                            className={inputBaseClass} 
-                            placeholder={isEditMode ? "" : "Lettre, chiffre, symbole (@,+,...)"}
-                        />
+                        <div className="relative">
+                            <input 
+                                type={showPassword ? "text" : "password"}
+                                name="password" 
+                                id="password" 
+                                value={formData.password} 
+                                onChange={handleChange} 
+                                className={`${inputBaseClass} pr-10`}
+                                placeholder={isEditMode ? "" : "Lettre, chiffre, symbole (@,+,...)"}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                            >
+                                {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-secondary mb-1">Confirmer le mot de passe</label>
-                        <input type="password" name="confirmPassword" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputBaseClass} />
+                        <div className="relative">
+                            <input 
+                                type={showConfirmPassword ? "text" : "password"}
+                                name="confirmPassword" 
+                                id="confirmPassword" 
+                                value={confirmPassword} 
+                                onChange={(e) => setConfirmPassword(e.target.value)} 
+                                className={`${inputBaseClass} pr-10`}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                            >
+                                {showConfirmPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                            </button>
+                        </div>
                     </div>
                  </div>
               </div>

@@ -21,8 +21,10 @@ export interface User {
 export interface PopulatedUser {
   _id: string;
   name: string;
+  lastname?: string; // Add lastname to interface for Avatar
   email: string;
   phone: string;
+  avatar?: string;
 }
 
 export interface Baby {
@@ -37,6 +39,7 @@ export interface Baby {
   height?: number;
   weight?: number;
   lastheadsizeUpdate?: string;
+  avatar?: string;
   userId: PopulatedUser;
   createdAt?: string;
 }
@@ -159,4 +162,12 @@ export interface ContactInfo {
   socials: SocialItem[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface AvatarItem {
+  _id: string;
+  url: string;
+  type: 'parent' | 'baby';
+  gender: 'male' | 'female';
+  createdAt?: string;
 }

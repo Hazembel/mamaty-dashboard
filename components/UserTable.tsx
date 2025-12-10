@@ -56,6 +56,9 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEdit, onDelete, onViewDe
               Genre
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
+              Rôle
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
               Relations / Favoris
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
@@ -96,6 +99,17 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEdit, onDelete, onViewDe
                     {user.gender === 'male' ? 'Homme' : user.gender === 'female' ? 'Femme' : 'Autre'}
                   </button>
                 ) : 'N/A'}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                {user.role === 'admin' ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Administrateur
+                    </span>
+                ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Utilisateur
+                    </span>
+                )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">
                 <div className="flex items-center gap-2">
@@ -154,7 +168,8 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEdit, onDelete, onViewDe
                   </button>
                   <button 
                     onClick={() => onDelete(user)}
-                    className="p-2 rounded-md text-text-secondary hover:bg-gray-100 hover:text-red-600 transition-colors"
+                    disabled={user.email === 'admin@mamaty.com'}
+                    className={`p-2 rounded-md transition-colors ${user.email === 'admin@mamaty.com' ? 'text-gray-300 cursor-not-allowed' : 'text-text-secondary hover:bg-gray-100 hover:text-red-600'}`}
                     aria-label={`Supprimer ${user.name}`}
                   >
                      <TrashIcon className="h-5 w-5" />

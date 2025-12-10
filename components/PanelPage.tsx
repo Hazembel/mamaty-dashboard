@@ -12,6 +12,7 @@ import ArticlesPage from './ArticlesPage';
 import RecipesPage from './RecipesPage';
 import SettingsPage from './SettingsPage';
 import InfosPage from './InfosPage';
+import AvatarsPage from './AvatarsPage';
 import EditUserModal from './EditUserModal';
 import { User } from '../types';
 import { getProfile } from '../services/adminService';
@@ -124,6 +125,7 @@ const PanelPage: React.FC<PanelPageProps> = ({ token, onLogout }) => {
                     {currentPage === 'advices' && <AdvicesPage token={token} onLogout={onLogout} />}
                     {currentPage === 'articles' && <ArticlesPage token={token} onLogout={onLogout} />}
                     {currentPage === 'recipes' && <RecipesPage token={token} onLogout={onLogout} />}
+                    {currentPage === 'avatars' && <AvatarsPage token={token} onLogout={onLogout} />}
                     {currentPage === 'settings' && <SettingsPage token={token} onLogout={onLogout} />}
                     {currentPage === 'infos' && <InfosPage token={token} onLogout={onLogout} />}
                 </main>
@@ -136,6 +138,7 @@ const PanelPage: React.FC<PanelPageProps> = ({ token, onLogout }) => {
                 onSave={handleSaveProfile}
                 user={currentUser}
                 hideRole={true}
+                token={token}
             />
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </div>

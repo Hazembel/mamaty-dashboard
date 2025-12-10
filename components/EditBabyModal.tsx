@@ -4,6 +4,7 @@ import { Baby } from '../types';
 import { XIcon } from './icons';
 import Dropdown from './Dropdown';
 import DatePicker from './DatePicker';
+import AvatarSelector from './AvatarSelector';
 
 interface BabyModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface BabyModalProps {
   onSave: (baby: Partial<Baby>) => Promise<void>;
   baby: Baby | null;
   isLoading?: boolean;
+  token?: string;
 }
 
 const genderOptions = [
@@ -19,7 +21,7 @@ const genderOptions = [
     { value: 'Female', label: 'Fille' },
 ];
 
-const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby, isLoading }) => {
+const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby, isLoading, token }) => {
   const [formData, setFormData] = useState({
     name: '',
     gender: '',
@@ -29,6 +31,7 @@ const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby
     headSize: '',
     height: '',
     weight: '',
+    avatar: '',
   });
   const [error, setError] = useState('');
   
@@ -37,14 +40,24 @@ const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby
         setError('');
         if (baby) {
           let formattedBirthday = '';
-          if (baby.birthday && !baby.birthday.startsWith('0000-00-00')) {
-            const dateString = baby.birthday;
-            // Strict parsing to avoid timezone shifts. 
-            // If ISO string (e.g. 2000-01-19T00:00:00.000Z), just take the date part.
-            if (dateString.includes('T')) {
-                formattedBirthday = dateString.split('T')[0];
-            } else {
-                formattedBirthday = dateString;
+          if (baby.birthday) {
+            const dateString = String(baby.birthday);
+            
+            if (dateString !== 'undefined' && dateString !== 'null' && !dateString.startsWith('0000-00-00')) {
+                // Handle DD/MM/YYYY format
+                if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
+                    const parts = dateString.split('/');
+                    if (parts.length === 3) {
+                        // Convert to YYYY-MM-DD
+                        formattedBirthday = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+                } 
+                // Handle ISO format (e.g. 2000-01-19T00:00:00.000Z)
+                else if (dateString.includes('T')) {
+                    formattedBirthday = dateString.split('T')[0];
+                } else {
+                    formattedBirthday = dateString;
+                }
             }
           }
 
@@ -57,6 +70,7 @@ const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby
             headSize: baby.headSize?.toString() || '',
             height: baby.height?.toString() || '',
             weight: baby.weight?.toString() || '',
+            avatar: baby.avatar || '',
           });
         }
     }
@@ -141,6 +155,18 @@ const EditBabyModal: React.FC<BabyModalProps> = ({ isOpen, onClose, onSave, baby
                         onChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
                     />
                 </div>
+              </div>
+
+              {/* Avatar Selection */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-3">Choisir un Avatar</label>
+                <AvatarSelector 
+                    section="baby"
+                    onSelect={(url) => setFormData(prev => ({ ...prev, avatar: url }))}
+                    selectedAvatar={formData.avatar}
+                    initialGender={formData.gender === 'Female' ? 'female' : 'male'}
+                    token={token || ''}
+                />
               </div>
               
               <div>

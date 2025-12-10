@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface AvatarProps {
@@ -9,9 +10,13 @@ interface AvatarProps {
 }
 
 const getInitials = (name: string, lastname?: string): string => {
-  if (lastname) {
+  // Guard against undefined/null name
+  if (!name || typeof name !== 'string') return 'N/A';
+  
+  if (lastname && typeof lastname === 'string') {
     return `${name.charAt(0)}${lastname.charAt(0)}`.toUpperCase();
   }
+  
   const parts = name.split(' ').filter(Boolean);
   if (parts.length > 1) {
     return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
@@ -19,7 +24,8 @@ const getInitials = (name: string, lastname?: string): string => {
   if (parts.length === 1 && parts[0].length > 1) {
     return parts[0].substring(0, 2).toUpperCase();
   }
-  return 'N/A';
+  
+  return name.length > 0 ? name.substring(0, 2).toUpperCase() : 'N/A';
 };
 
 const Avatar: React.FC<AvatarProps> = ({ name, lastname, src, size = 'md', className = '' }) => {
@@ -34,13 +40,14 @@ const Avatar: React.FC<AvatarProps> = ({ name, lastname, src, size = 'md', class
   const showFallback = !src || imgError;
 
   if (showFallback) {
-    const initials = getInitials(name, lastname);
+    const safeName = typeof name === 'string' ? name : 'Inconnu';
+    const initials = getInitials(safeName, lastname);
     const colorClasses = 'bg-cyan-100 text-cyan-800';
     
     return (
       <div
         className={`rounded-full flex items-center justify-center font-semibold ${sizeClasses[size]} ${colorClasses} ${className}`}
-        aria-label={`${name} ${lastname || ''}`}
+        aria-label={`${safeName} ${lastname || ''}`}
       >
         {initials}
       </div>

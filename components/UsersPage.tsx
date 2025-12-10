@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { getUsers, updateUser, deleteUser, createUser } from '../services/userService';
+import { deleteBaby } from '../services/babyService';
 import { getCategories } from '../services/categoryService';
 import { User, Category } from '../types';
 import UserTable from './UserTable';
@@ -11,6 +12,8 @@ import ConfirmationModal from './ConfirmationModal';
 import EditUserModal from './EditUserModal';
 import UserDetailsModal from './UserDetailsModal';
 import Dropdown, { DropdownOption } from './Dropdown';
+import { createAdmin } from '../services/adminService';
+import PasswordChallengeModal from './PasswordChallengeModal';
 
 interface UsersPageProps {
   token: string;
@@ -51,6 +54,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToChallenge, setUserToChallenge] = useState<User | null>(null);
   
   // Details Modal State
   const [viewingUser, setViewingUser] = useState<User | null>(null);
@@ -121,9 +125,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
       .filter(user => {
         if (genderFilter === 'all') return true;
         return user.gender === genderFilter;
-      })
-      // Filter out admins to show only users
-      .filter(user => user.role !== 'admin');
+      });
 
 
     if (sortOption) {
@@ -164,7 +166,12 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
         setUsers(users.map(u => (u._id === savedUser._id ? { ...u, ...savedUser } : u)));
         showToast('Utilisateur mis à jour avec succès.', 'success');
       } else { // Add mode
-        const newUser = await createUser(token, userData);
+        let newUser;
+        if (userData.role === 'admin') {
+            newUser = await createAdmin(token, userData);
+        } else {
+            newUser = await createUser(token, userData);
+        }
         setUsers([newUser, ...users]);
         showToast('Utilisateur ajouté avec succès.', 'success');
       }
@@ -181,11 +188,23 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
 
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
+
+    if (userToDelete.email === 'admin@mamaty.com') {
+        showToast("Impossible de supprimer le super administrateur.", 'error');
+        setUserToDelete(null);
+        return;
+    }
+
     setIsSubmitting(true);
     try {
+      // Cascading delete: delete babies first
+      if (userToDelete.babies && userToDelete.babies.length > 0) {
+          await Promise.all(userToDelete.babies.map(baby => deleteBaby(token, baby._id)));
+      }
+
       await deleteUser(token, userToDelete._id);
       setUsers(users.filter(u => u._id !== userToDelete._id));
-      showToast("Utilisateur supprimé avec succès.", 'success');
+      showToast("Utilisateur et ses données associés supprimés avec succès.", 'success');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "La suppression a échoué.";
       showToast(errorMessage, 'error');
@@ -201,8 +220,13 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
   };
   
   const openEditModal = (user: User) => {
-    setUserToEdit(user);
-    setIsModalOpen(true);
+    // If attempting to edit an admin, challenge for password first
+    if (user.role === 'admin') {
+        setUserToChallenge(user);
+    } else {
+        setUserToEdit(user);
+        setIsModalOpen(true);
+    }
   };
 
   const openViewDetailsModal = (user: User, tab: 'babies' | 'doctors' | 'recipes' | 'articles') => {
@@ -289,6 +313,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
         onSave={handleSaveUser}
         user={userToEdit}
         isLoading={isSubmitting}
+        token={token}
       />
       
       <ConfirmationModal
@@ -296,7 +321,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
         onClose={() => setUserToDelete(null)}
         onConfirm={handleConfirmDelete}
         title="Supprimer l'utilisateur"
-        message={`Êtes-vous sûr de vouloir supprimer ${userToDelete?.name} ${userToDelete?.lastname}? Cette action est irréversible.`}
+        message={`Êtes-vous sûr de vouloir supprimer ${userToDelete?.name} ${userToDelete?.lastname} ? Toutes ses données associées (bébés, etc.) seront également supprimées. Cette action est irréversible.`}
         confirmButtonText="Supprimer"
         isLoading={isSubmitting}
       />
@@ -308,6 +333,19 @@ const UsersPage: React.FC<UsersPageProps> = ({ token, onLogout, onNavigateToBaby
         categories={categories}
         initialTab={detailsTab}
         onNavigateToBaby={onNavigateToBaby}
+      />
+      
+      <PasswordChallengeModal
+        isOpen={!!userToChallenge}
+        onClose={() => setUserToChallenge(null)}
+        onSuccess={() => {
+            if (userToChallenge) {
+                setUserToEdit(userToChallenge);
+                setIsModalOpen(true);
+            }
+            setUserToChallenge(null);
+        }}
+        adminEmail={userToChallenge?.email || ''}
       />
     </>
   );

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { DocumentTextIcon, UsersIcon, BabyIcon, DoctorIcon, ViewGridIcon, LightBulbIcon, CakeIcon, HomeIcon, InformationCircleIcon } from './icons';
+import { DocumentTextIcon, UsersIcon, BabyIcon, DoctorIcon, ViewGridIcon, LightBulbIcon, CakeIcon, HomeIcon, InformationCircleIcon, PhotoIcon } from './icons';
 
 interface NavLinkProps {
   href: string;
@@ -45,6 +45,7 @@ const SidebarContent: React.FC<{ currentPage: string; onNavigate: (page: string)
       <NavLink href="#" icon={<LightBulbIcon className="h-6 w-6" />} onClick={() => onNavigate('advices')} active={currentPage === 'advices'} />
       <NavLink href="#" icon={<DocumentTextIcon className="h-6 w-6" />} onClick={() => onNavigate('articles')} active={currentPage === 'articles'} />
       <NavLink href="#" icon={<CakeIcon className="h-6 w-6" />} onClick={() => onNavigate('recipes')} active={currentPage === 'recipes'} />
+      <NavLink href="#" icon={<PhotoIcon className="h-6 w-6" />} onClick={() => onNavigate('avatars')} active={currentPage === 'avatars'} />
       <NavLink href="#" icon={<InformationCircleIcon className="h-6 w-6" />} onClick={() => onNavigate('infos')} active={currentPage === 'infos'} />
     </nav>
   </>

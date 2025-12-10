@@ -16,6 +16,7 @@ const formatDate = (dateString?: string) => {
   if (!dateString || dateString.startsWith('0000-00-00')) return 'N/A';
   try {
     let date: Date;
+    // Handle DD/MM/YYYY format commonly used in this backend
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
       const parts = dateString.split('/');
       date = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
@@ -65,21 +66,35 @@ const BabyTable: React.FC<BabyTableProps> = ({ babies, onEdit, onDelete, onGende
           {babies.map((baby) => (
             <tr key={baby._id}>
               <td className="px-6 py-4 whitespace-nowrap">
-                {baby.userId ? (
+                {/* Robust check for populated user object to display Parent Avatar */}
+                {baby.userId && typeof baby.userId === 'object' && 'name' in baby.userId ? (
                    <div className="flex items-center">
                       <div className="flex-shrink-0">
-                         <Avatar name={baby.userId.name} />
+                         <Avatar 
+                            name={baby.userId.name || 'Inconnu'} 
+                            lastname={baby.userId.lastname} 
+                            src={baby.userId.avatar}
+                         />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-text-primary">{baby.userId.name}</div>
+                        <div className="text-sm font-medium text-text-primary">{baby.userId.name} {baby.userId.lastname}</div>
                         <div className="text-sm text-text-secondary">{baby.userId.email}</div>
                       </div>
                     </div>
                 ) : (
-                    <span className="text-sm text-text-secondary">N/A</span>
+                    <span className="text-sm text-text-secondary italic">
+                        {typeof baby.userId === 'string' ? 'Utilisateur non trouvé' : 'N/A'}
+                    </span>
                 )}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">{baby.name}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
+                <div className="flex items-center">
+                    <div className="flex-shrink-0 mr-3">
+                        <Avatar name={baby.name} src={baby.avatar} size="sm" className="w-8 h-8" />
+                    </div>
+                    {baby.name}
+                </div>
+              </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                  {baby.gender ? (
                     <button onClick={() => baby.gender && onGenderClick(baby.gender)} className="cursor-pointer hover:text-premier transition-colors">

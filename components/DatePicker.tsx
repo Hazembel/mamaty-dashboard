@@ -25,7 +25,10 @@ const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, id, name }) =>
   const years = Array.from({ length: currentYear - 1900 + 6 }, (_, i) => 1900 + i).reverse();
 
   const parseDateString = (dateString: string) => {
-    if (!dateString) return new Date();
+    // Guard against undefined or non-string inputs
+    if (!dateString || typeof dateString !== 'string') return new Date();
+    
+    // Check if it matches YYYY-MM-DD
     const parts = dateString.split('-');
     if (parts.length === 3) {
       const year = parseInt(parts[0], 10);

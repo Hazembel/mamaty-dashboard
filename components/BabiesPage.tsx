@@ -192,7 +192,26 @@ const BabiesPage: React.FC<BabiesPageProps> = ({ token, onLogout, initialBabyId,
     setIsSubmitting(true);
     try {
       const savedBaby = await updateBaby(token, babyToEdit._id, babyData);
-      setBabies(babies.map(b => (b._id === savedBaby._id ? { ...b, ...savedBaby } : b)));
+      
+      setBabies(prevBabies => prevBabies.map(b => {
+        if (b._id === savedBaby._id) {
+            // Merge the new data with old data
+            const merged = { ...b, ...savedBaby };
+            
+            // CRITICAL FIX: The backend update usually returns 'userId' as a string (ID).
+            // We must preserve the populated 'userId' object from the existing state (b.userId)
+            // if the new one is just an ID string, so the table continues to show the parent name/avatar.
+            if (typeof savedBaby.userId === 'string' && typeof b.userId === 'object' && b.userId !== null) {
+                // Ensure we are talking about the same user before preserving
+                if (savedBaby.userId === b.userId._id) {
+                    merged.userId = b.userId;
+                }
+            }
+            return merged;
+        }
+        return b;
+      }));
+
       showToast('Bébé mis à jour avec succès.', 'success');
       setBabyToEdit(null);
     } catch (err) {
@@ -309,6 +328,7 @@ const BabiesPage: React.FC<BabiesPageProps> = ({ token, onLogout, initialBabyId,
         onSave={handleSaveBaby}
         baby={babyToEdit}
         isLoading={isSubmitting}
+        token={token}
       />
       
       <ConfirmationModal

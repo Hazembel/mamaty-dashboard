@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import PageLayout from './PageLayout';
 import { changePassword } from '../services/settingsService';
-import { ShieldCheckIcon, BellIcon, DownloadIcon, SaveIcon, EyeIcon } from './icons';
+import { ShieldCheckIcon, BellIcon, DownloadIcon, SaveIcon, EyeIcon, EyeOffIcon } from './icons';
 import { THEME_PRESETS, applyTheme } from '../lib/theme';
 
 interface SettingsPageProps {
@@ -17,6 +17,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ token }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // Password Visibility State
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [securityMessage, setSecurityMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -164,39 +170,66 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ token }) => {
                     <form onSubmit={handlePasswordChange} className="space-y-5">
                         <div>
                             <label className="block text-sm font-medium text-text-secondary mb-1">Mot de passe actuel</label>
-                            <input 
-                                type="password" 
-                                required 
-                                value={currentPassword}
-                                onChange={(e) => setCurrentPassword(e.target.value)}
-                                onInvalid={handleInvalid}
-                                onInput={handleInput}
-                                className="w-full rounded-lg border-border-color bg-background py-2.5 px-4 text-text-primary focus:ring-2 focus:ring-premier focus:bg-white transition-colors"
-                            />
+                            <div className="relative">
+                                <input 
+                                    type={showCurrentPassword ? "text" : "password"} 
+                                    required 
+                                    value={currentPassword}
+                                    onChange={(e) => setCurrentPassword(e.target.value)}
+                                    onInvalid={handleInvalid}
+                                    onInput={handleInput}
+                                    className="w-full rounded-lg border-border-color bg-background py-2.5 px-4 pr-10 text-text-primary focus:ring-2 focus:ring-premier focus:bg-white transition-colors"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                >
+                                    {showCurrentPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-text-secondary mb-1">Nouveau mot de passe</label>
-                            <input 
-                                type="password" 
-                                required 
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                onInvalid={handleInvalid}
-                                onInput={handleInput}
-                                className="w-full rounded-lg border-border-color bg-background py-2.5 px-4 text-text-primary focus:ring-2 focus:ring-premier focus:bg-white transition-colors"
-                            />
+                            <div className="relative">
+                                <input 
+                                    type={showNewPassword ? "text" : "password"} 
+                                    required 
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    onInvalid={handleInvalid}
+                                    onInput={handleInput}
+                                    className="w-full rounded-lg border-border-color bg-background py-2.5 px-4 pr-10 text-text-primary focus:ring-2 focus:ring-premier focus:bg-white transition-colors"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewPassword(!showNewPassword)}
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                >
+                                    {showNewPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-text-secondary mb-1">Confirmer le nouveau mot de passe</label>
-                            <input 
-                                type="password" 
-                                required 
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                onInvalid={handleInvalid}
-                                onInput={handleInput}
-                                className="w-full rounded-lg border-border-color bg-background py-2.5 px-4 text-text-primary focus:ring-2 focus:ring-premier focus:bg-white transition-colors"
-                            />
+                            <div className="relative">
+                                <input 
+                                    type={showConfirmPassword ? "text" : "password"} 
+                                    required 
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    onInvalid={handleInvalid}
+                                    onInput={handleInput}
+                                    className="w-full rounded-lg border-border-color bg-background py-2.5 px-4 pr-10 text-text-primary focus:ring-2 focus:ring-premier focus:bg-white transition-colors"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                >
+                                    {showConfirmPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                                </button>
+                            </div>
                         </div>
 
                         {securityMessage && (

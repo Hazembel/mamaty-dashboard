@@ -1,7 +1,7 @@
 
 import React, { useState, FormEvent } from 'react';
 import { loginAdmin } from '../services/adminService';
-import { UserIcon, LockIcon } from './icons';
+import { UserIcon, LockIcon, EyeIcon, EyeOffIcon } from './icons';
 
 interface LoginPageProps {
   onLoginSuccess: (token: string) => void;
@@ -10,6 +10,7 @@ interface LoginPageProps {
 const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -74,16 +75,24 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <LockIcon className="h-5 w-5 text-gray-400" />
               </span>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onInvalid={(e) => handleInvalid(e, "Veuillez saisir votre mot de passe.")}
                 onInput={handleInput}
                 placeholder="Mot de passe"
-                className="w-full pl-10 pr-4 py-3 border border-border-color rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-premier transition-shadow"
+                className="w-full pl-10 pr-12 py-3 border border-border-color rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-premier transition-shadow"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+              >
+                {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              </button>
             </div>
             
             {error && <p className="text-red-500 text-sm text-center">{error}</p>}

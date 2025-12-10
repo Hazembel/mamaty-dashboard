@@ -28,7 +28,8 @@ const Header: React.FC<HeaderProps> = ({ onLogout, onMenuClick, user, onEditProf
   const getDisplayName = () => {
       if (!user) return 'Admin';
       if (user.name) return `${user.name} ${user.lastname || ''}`;
-      if (user.email) return user.email.split('@')[0];
+      // Safe check before split
+      if (user.email && typeof user.email === 'string') return user.email.split('@')[0];
       return 'Admin';
   };
 
